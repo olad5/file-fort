@@ -1,0 +1,29 @@
+version: '3.1'
+
+services:
+  database:
+    container_name: test-go-cloud-backup-system-postgres
+    image: postgres:14.5
+    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c random_page_cost=1.0
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=newPassword
+      - POSTGRES_DB=go-cloud-backup-system
+    ports:
+      - '5247:5432'
+
+  adminer:
+    container_name: test-go-cloud-backup-system-adminer
+    image: adminer:4.8.1
+    environment:
+      ADMINER_DEFAULT_SERVER: postgresql
+      ADMINER_DESIGN: hever
+    ports:
+      - "7080:8080"
+
+  redis:
+    container_name: test-go-cloud-backup-system-redis
+    image: redis:6.2-alpine
+    ports:
+      - "5080:6379"
+
