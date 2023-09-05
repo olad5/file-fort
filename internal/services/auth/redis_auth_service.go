@@ -18,7 +18,12 @@ type RedisAuthService struct {
 	SecretKey string
 }
 
-var ErrInvalidToken = errors.New("invalid token")
+var (
+	ErrInvalidToken    = errors.New("invalid token")
+	ErrExpiredToken    = errors.New("expired token")
+	ErrGeneratingToken = errors.New("Error generating JWT token")
+	ErrDecodingToken   = errors.New("error decoding JWT token")
+)
 
 const (
 	JWT_HASH_NAME       = "activeJwtClients"
@@ -45,19 +50,24 @@ func (r *RedisAuthService) GenerateJWT(ctx context.Context, user domain.User) (s
 	})
 	tokenString, err := token.SignedString([]byte(r.SecretKey))
 	if err != nil {
-		return "", errors.New("Error generating JWT token")
+		return "", ErrGeneratingToken
 	}
 
 	err = r.Cache.SetOne(ctx, constructUserIdKey(user.ID.String()), tokenString)
 	if err != nil {
-		return "", errors.New("Error generating JWT token")
+		return "", ErrGeneratingToken
 	}
 	return tokenString, nil
 }
 
-func (r *RedisAuthService) DecodeJWT(ctx context.Context, tokenString string) (string, error) {
-	if tokenString == "" {
-		return "", ErrInvalidToken
+func (r *RedisAuthService) DecodeJWT(ctx context.Context, authHeader string) (string, error) {
+	const Bearer = "Bearer "
+	var tokenString string
+	if strings.HasPrefix(authHeader, Bearer) {
+		tokenString = strings.TrimPrefix(authHeader, Bearer)
+		if tokenString == "" {
+			return "", ErrInvalidToken
+		}
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -67,20 +77,19 @@ func (r *RedisAuthService) DecodeJWT(ctx context.Context, tokenString string) (s
 		return []byte(r.SecretKey), nil
 	})
 	if err != nil {
-		return "", errors.New("error decoding jwt")
+		return "", ErrDecodingToken
 	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return "", errors.New("expired token")
+			return "", ErrExpiredToken
 		}
 		userId, ok := claims["sub"]
 		if ok == true && userId != nil {
 			return userId.(string), nil
 		}
-		return "", ErrInvalidToken
-	} else {
-		return "", ErrInvalidToken
 	}
+	return "", ErrInvalidToken
 }
 
 func (r *RedisAuthService) IsUserLoggedIn(ctx context.Context, authHeader, userId string) bool {
