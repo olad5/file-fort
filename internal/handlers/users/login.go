@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
 
+	"github.com/olad5/go-cloud-backup-system/internal/infra"
 	"github.com/olad5/go-cloud-backup-system/internal/usecases/users"
 	response "github.com/olad5/go-cloud-backup-system/pkg/utils"
 )
@@ -36,17 +38,19 @@ func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accessToken, err := u.userService.LogUserIn(ctx, request.Email, request.Password)
-	if err != nil && err.Error() == users.ErrUserNotFound {
-		response.ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err != nil && err.Error() == users.ErrPasswordIncorrect {
-		response.ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	if err != nil {
-		response.ErrorResponse(w, appErrors.ErrSomethingWentWrong, http.StatusInternalServerError)
-		return
+		switch {
+		case errors.Is(err, infra.ErrUserNotFound):
+			response.ErrorResponse(w, "user does not exist", http.StatusNotFound)
+			return
+		case errors.Is(err, users.ErrPasswordIncorrect):
+			response.ErrorResponse(w, "invalid credentials", http.StatusUnauthorized)
+			return
+		default:
+			response.ErrorResponse(w, appErrors.ErrSomethingWentWrong, http.StatusInternalServerError)
+			return
+
+		}
 	}
 
 	response.SuccessResponse(w, "user logged in successfully",

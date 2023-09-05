@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
@@ -47,15 +48,16 @@ func (u UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newUser, err := u.userService.CreateUser(ctx, request.FirstName, request.LastName, request.Email, request.Password)
-	if err != nil && err.Error() == users.ErrUserAlreadyExists {
-		response.ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	if err != nil {
-		response.ErrorResponse(w, appErrors.ErrSomethingWentWrong, http.StatusInternalServerError)
-		return
+		switch {
+		case errors.Is(err, users.ErrUserAlreadyExists):
+			response.ErrorResponse(w, err.Error(), http.StatusBadRequest)
+			return
+		default:
+			response.ErrorResponse(w, appErrors.ErrSomethingWentWrong, http.StatusInternalServerError)
+			return
+		}
 	}
-
 	response.SuccessResponse(w, "user created successfully",
 		map[string]interface{}{
 			"id":         newUser.ID.String(),
