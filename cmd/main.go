@@ -5,12 +5,17 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/olad5/go-cloud-backup-system/config/data"
+
 	"github.com/olad5/go-cloud-backup-system/config"
 	"github.com/olad5/go-cloud-backup-system/internal/app/router"
-	handlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
+	fileHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/files"
+	userHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
+	"github.com/olad5/go-cloud-backup-system/internal/infra/aws"
 	"github.com/olad5/go-cloud-backup-system/internal/infra/postgres"
 	"github.com/olad5/go-cloud-backup-system/internal/infra/redis"
 	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
+	fileServices "github.com/olad5/go-cloud-backup-system/internal/usecases/files"
 	"github.com/olad5/go-cloud-backup-system/internal/usecases/users"
 	"github.com/olad5/go-cloud-backup-system/pkg/app/server"
 )
@@ -20,7 +25,8 @@ func main() {
 	ctx := context.Background()
 
 	port := configurations.Port
-	userRepo, err := postgres.NewPostgresRepo(ctx, configurations.DatabaseUrl)
+	postgresConnection := data.StartPostgres(configurations.DatabaseUrl)
+	userRepo, err := postgres.NewPostgresUserRepo(ctx, postgresConnection)
 	if err != nil {
 		log.Fatal("Error Initializing User Repo", err)
 	}
@@ -40,17 +46,42 @@ func main() {
 		log.Fatal("Error Initializing Auth Service", err)
 	}
 
-	userService, err := users.NewUserService(userRepo, authService, configurations)
+	userService, err := users.NewUserService(userRepo, authService)
 	if err != nil {
 		log.Fatal("Error Initializing UserService")
 	}
 
-	userHandler, err := handlers.NewHandler(*userService, authService)
+	userHandler, err := userHandlers.NewUserHandler(*userService, authService)
 	if err != nil {
 		log.Fatal("failed to create the User handler: ", err)
 	}
 
-	appRouter := router.NewHttpRouter(*userHandler, authService)
+	folderRepo, err := postgres.NewPostgresFolderRepo(ctx, postgresConnection)
+	if err != nil {
+		log.Fatal("Error Initializing Folder Repo", err)
+	}
+
+	fileRepo, err := postgres.NewPostgresFileRepo(ctx, postgresConnection)
+	if err != nil {
+		log.Fatal("Error Initializing File Repo", err)
+	}
+
+	fileStore, err := aws.NewAwsFileStore(ctx, configurations)
+	if err != nil {
+		log.Fatal("Error Initializing AWS File store", err)
+	}
+
+	filesService, err := fileServices.NewFileService(fileRepo, folderRepo, fileStore)
+	if err != nil {
+		log.Fatal("Error Initializing UserService")
+	}
+
+	fileHandler, err := fileHandlers.NewFileHandler(*filesService)
+	if err != nil {
+		log.Fatal("failed to create the fileHandler: ", err)
+	}
+
+	appRouter := router.NewHttpRouter(*userHandler, *fileHandler, authService)
 
 	svr := server.CreateNewServer(appRouter)
 
