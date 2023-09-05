@@ -41,9 +41,13 @@ func NewPostgresFileRepo(ctx context.Context, connection *sqlx.DB) (*PostgresFil
 }
 
 func (p *PostgresFileRepository) SaveFile(ctx context.Context, file domain.File) error {
-	query := `
-    INSERT INTO files (id, file_name, owner_id, folder_id, file_store_link, file_size) VALUES (:id, :file_name, :owner_id, :folder_id, :file_store_link, :file_size)
+	const query = `
+    INSERT INTO files 
+      (id, file_name, owner_id, folder_id, file_store_link, file_size) 
+    VALUES 
+      (:id, :file_name, :owner_id, :folder_id, :file_store_link, :file_size)
   `
+
 	_, err := p.connection.NamedExec(query, toSqlxFile(file))
 	if err != nil {
 		return fmt.Errorf("error saving file in the db: %w", err)

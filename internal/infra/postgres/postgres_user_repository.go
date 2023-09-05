@@ -87,14 +87,14 @@ func (p *PostgresUserRepository) Ping(ctx context.Context) error {
 }
 
 type SqlxUser struct {
-	ID        uuid.UUID       `db:"id"`
-	Email     string          `db:"email"`
-	FirstName string          `db:"first_name"`
-	LastName  string          `db:"last_name"`
-	Password  string          `db:"password"`
-	Role      domain.UserRole `db:"role"`
-	CreatedAt time.Time       `db:"created_at"`
-	UpdatedAt time.Time       `db:"updated_at"`
+	ID        uuid.UUID   `db:"id"`
+	Email     string      `db:"email"`
+	FirstName string      `db:"first_name"`
+	LastName  string      `db:"last_name"`
+	Password  string      `db:"password"`
+	Role      domain.Role `db:"role"`
+	CreatedAt time.Time   `db:"created_at"`
+	UpdatedAt time.Time   `db:"updated_at"`
 }
 
 func toUser(u SqlxUser) domain.User {

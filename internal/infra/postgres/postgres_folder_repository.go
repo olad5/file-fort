@@ -36,8 +36,11 @@ func NewPostgresFolderRepo(ctx context.Context, connection *sqlx.DB) (*PostgresF
 }
 
 func (p *PostgresFolderRepository) CreateFolder(ctx context.Context, folder domain.Folder) error {
-	query := `
-    INSERT INTO folders (id, folder_name, owner_id) VALUES (:id, :folder_name, :owner_id)
+	const query = `
+    INSERT INTO folders 
+      (id, folder_name, owner_id) 
+    VALUES 
+      (:id, :folder_name, :owner_id)
   `
 
 	_, err := p.connection.NamedExec(query, toSqlxFolder(folder))

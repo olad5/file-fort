@@ -1,14 +1,16 @@
 package domain
 
-import "github.com/google/uuid"
+import (
+	"time"
 
-// TODO:TODO: user will have role
-type UserRole string
+	"github.com/google/uuid"
+)
 
-// TODO:TODO: i hate these role names
+type Role string
+
 const (
-	RegularUserRole UserRole = "regular"
-	AdminUserRole   UserRole = "admin"
+	RoleUser  Role = "regular"
+	RoleAdmin Role = "admin"
 )
 
 type User struct {
@@ -17,5 +19,7 @@ type User struct {
 	FirstName string
 	LastName  string
 	Password  string
-	Role      UserRole
+	Role      Role
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
