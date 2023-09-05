@@ -12,7 +12,7 @@ type UserHandler struct {
 	authService auth.AuthService
 }
 
-func NewHandler(userService users.UserService, authService auth.AuthService) (*UserHandler, error) {
+func NewUserHandler(userService users.UserService, authService auth.AuthService) (*UserHandler, error) {
 	if userService == (users.UserService{}) {
 		return nil, errors.New("user service cannot be empty")
 	}

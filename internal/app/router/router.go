@@ -4,21 +4,47 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
-	handlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
+	"github.com/olad5/go-cloud-backup-system/internal/handlers/auth"
+	fileHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/files"
+	userHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
 	authService "github.com/olad5/go-cloud-backup-system/internal/services/auth"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func NewHttpRouter(userHandler handlers.UserHandler, authService authService.AuthService) http.Handler {
+func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandlers.FileHandler, authService authService.AuthService) http.Handler {
 	router := chi.NewRouter()
 
-	router.Use(
-		middleware.AllowContentType("application/json"),
-		middleware.SetHeader("Content-Type", "application/json"),
-	)
+	router.Group(func(r chi.Router) {
+		r.Use(
+			middleware.AllowContentType("application/json"),
+			middleware.SetHeader("Content-Type", "application/json"),
+		)
+		r.Post("/users/login", userHandler.Login)
+		r.Post("/users", userHandler.Register)
+	})
 
-	router.Post("/users/login", userHandler.Login)
-	router.Post("/users", userHandler.Register)
+	// -------------------------------------------------------------------------
+
+	router.Group(func(r chi.Router) {
+		r.Use(
+			middleware.AllowContentType("application/json"),
+			middleware.SetHeader("Content-Type", "application/json"),
+		)
+		r.Use(auth.AuthMiddleware(authService))
+
+		r.Get("/users/me", userHandler.GetLoggedInUser)
+	})
+
+	// -------------------------------------------------------------------------
+
+	router.Group(func(r chi.Router) {
+		r.Use(middleware.AllowContentType("multipart/form-data"))
+		r.Use(auth.AuthMiddleware(authService))
+
+		r.Post("/file", fileHandler.Upload)
+		r.Post("/file", fileHandler.Upload)
+	})
+
 	return router
 }
