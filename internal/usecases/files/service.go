@@ -101,6 +101,26 @@ func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (strin
 	return fileUrl, nil
 }
 
+func (f *FileService) CreateFolder(ctx context.Context, folderName string) (domain.Folder, error) {
+	userId, err := uuid.Parse(ctx.Value("userId").(string))
+	if err != nil {
+		return domain.Folder{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	}
+
+	newFolder := domain.Folder{
+		ID:         uuid.New(),
+		OwnerId:    userId,
+		FolderName: folderName,
+	}
+
+	err = f.folderRepo.CreateFolder(ctx, newFolder)
+	if err != nil {
+		return domain.Folder{}, err
+	}
+
+	return newFolder, nil
+}
+
 func getDefaultFolder(ctx context.Context, f *FileService, userId uuid.UUID) (domain.Folder, error) {
 	existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, userId)
 	if err == nil {

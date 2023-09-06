@@ -35,6 +35,7 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 
 		r.Get("/users/me", userHandler.GetLoggedInUser)
 		r.Get("/file/{id}", fileHandler.Download)
+		r.Post("/folder", fileHandler.CreateFolder)
 	})
 
 	// -------------------------------------------------------------------------
