@@ -68,7 +68,7 @@ func (p *PostgresFileRepository) GetFileByFileId(ctx context.Context, fileId uui
 	return toDomainFile(file), nil
 }
 
-func (p *PostgresFileRepository) GetFilesByFolderId(ctx context.Context, folderId string) ([]domain.File, error) {
+func (p *PostgresFileRepository) GetFilesByFolderId(ctx context.Context, folderId uuid.UUID) ([]domain.File, error) {
 	var files []SqlxFile
 
 	err := p.connection.Select(&files, "SELECT * FROM files WHERE folder_id=$1", folderId)
@@ -96,8 +96,8 @@ func (p *PostgresFileRepository) Ping(ctx context.Context) error {
 type SqlxFile struct {
 	ID           uuid.UUID `db:"id"`
 	FileName     string    `db:"file_name"`
-	OwnerId      string    `db:"owner_id"`
-	FolderId     string    `db:"folder_id"`
+	OwnerId      uuid.UUID `db:"owner_id"`
+	FolderId     uuid.UUID `db:"folder_id"`
 	FileStoreKey string    `db:"file_store_key"`
 	FileSize     int64     `db:"file_size"`
 	CreatedAt    time.Time `db:"created_at"`

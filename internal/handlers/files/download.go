@@ -14,19 +14,19 @@ import (
 
 func (f FileHandler) Download(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	fileId := chi.URLParam(r, "id")
-	if fileId == "" {
+	id := chi.URLParam(r, "id")
+	if id == "" {
 		response.ErrorResponse(w, "file id required", http.StatusBadRequest)
 		return
 	}
 
-	fileIdAsUUID, err := uuid.Parse(fileId)
+	fileId, err := uuid.Parse(id)
 	if err != nil {
-		response.ErrorResponse(w, appErrors.ErrInvalidID, http.StatusBadRequest)
+		response.ErrorResponse(w, appErrors.ErrInvalidID.Error(), http.StatusBadRequest)
 		return
 	}
 
-	downloadUrl, err := f.fileService.DownloadFile(ctx, fileIdAsUUID)
+	downloadUrl, err := f.fileService.DownloadFile(ctx, fileId)
 	if err != nil {
 		switch {
 		case errors.Is(err, infra.ErrFileNotFound):

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/olad5/go-cloud-backup-system/internal/domain"
 	"github.com/olad5/go-cloud-backup-system/internal/infra"
+	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
 )
 
 type FileService struct {
@@ -31,25 +32,33 @@ func NewFileService(fileRepo infra.FileRepository, folderRepo infra.FolderReposi
 }
 
 func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *multipart.FileHeader) (domain.File, error) {
-	userId := ctx.Value("userId").(string)
+	userId, err := uuid.Parse(ctx.Value("userId").(string))
+	if err != nil {
+		return domain.File{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	}
+
 	filename := handler.Filename
 
-	var folderId string
+	var folderId uuid.UUID
 
 	if ctx.Value("folderId") == "" {
 		defaultFolder, err := getDefaultFolder(ctx, f, userId)
 		if err != nil {
 			return domain.File{}, err
 		}
-		folderId = defaultFolder.ID.String()
+		folderId = defaultFolder.ID
 	} else {
-		folderId = ctx.Value("folderId").(string)
+		folderId, err := uuid.Parse(ctx.Value("folderId").(string))
+		if err != nil {
+			return domain.File{}, appErrors.ErrInvalidID
+		}
+
 		existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, folderId)
 		if err != nil {
 			return domain.File{}, fmt.Errorf("error getting folder: %w", err)
 		}
 
-		if existingFolder.OwnerId.String() != userId {
+		if existingFolder.OwnerId != userId {
 			return domain.File{}, infra.ErrUserNotAuthorized
 		}
 	}
@@ -75,7 +84,10 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 }
 
 func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (string, error) {
-	userId := ctx.Value("userId").(string)
+	userId, err := uuid.Parse(ctx.Value("userId").(string))
+	if err != nil {
+		return "", fmt.Errorf("error parsing userId to UUID:%w", err)
+	}
 
 	file, err := f.fileRepo.GetFileByFileId(ctx, fileId)
 	if err != nil {
@@ -89,22 +101,17 @@ func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (strin
 	return fileUrl, nil
 }
 
-func getDefaultFolder(ctx context.Context, f *FileService, userId string) (domain.Folder, error) {
+func getDefaultFolder(ctx context.Context, f *FileService, userId uuid.UUID) (domain.Folder, error) {
 	existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, userId)
 	if err == nil {
 		return existingFolder, nil
 	}
 
-	userIdAsUUID, err := uuid.Parse(userId)
-	if err != nil {
-		return domain.Folder{}, fmt.Errorf("error parsing user uuid: %w", err)
-	}
-
 	const DefaultFolderName = "home"
 
 	newFolder := domain.Folder{
-		ID:         userIdAsUUID,
-		OwnerId:    userIdAsUUID,
+		ID:         userId,
+		OwnerId:    userId,
 		FolderName: DefaultFolderName,
 	}
 

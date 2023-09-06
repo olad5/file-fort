@@ -50,7 +50,7 @@ func (p *PostgresFolderRepository) CreateFolder(ctx context.Context, folder doma
 	return nil
 }
 
-func (p *PostgresFolderRepository) GetFolderByFolderId(ctx context.Context, folderId string) (domain.Folder, error) {
+func (p *PostgresFolderRepository) GetFolderByFolderId(ctx context.Context, folderId uuid.UUID) (domain.Folder, error) {
 	var folder SqlxFolder
 	err := p.connection.Get(&folder, "SELECT * FROM folders WHERE id=$1", folderId)
 	if err != nil {

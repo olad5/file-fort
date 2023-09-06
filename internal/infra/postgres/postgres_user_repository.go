@@ -65,7 +65,7 @@ func (p *PostgresUserRepository) GetUserByEmail(ctx context.Context, userEmail s
 	return toUser(user), nil
 }
 
-func (p *PostgresUserRepository) GetUserByUserId(ctx context.Context, userId string) (domain.User, error) {
+func (p *PostgresUserRepository) GetUserByUserId(ctx context.Context, userId uuid.UUID) (domain.User, error) {
 	var user SqlxUser
 
 	err := p.connection.Get(&user, "SELECT * FROM users WHERE id = $1", userId)

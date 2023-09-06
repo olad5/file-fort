@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
 
@@ -78,7 +79,10 @@ func (u *UserService) LogUserIn(ctx context.Context, email, password string) (st
 }
 
 func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) {
-	userId := ctx.Value("userId").(string)
+	userId, err := uuid.Parse(ctx.Value("userId").(string))
+	if err != nil {
+		return domain.User{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	}
 
 	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
 	if err != nil {

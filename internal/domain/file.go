@@ -9,8 +9,8 @@ import (
 type File struct {
 	ID           uuid.UUID
 	FileName     string
-	OwnerId      string
-	FolderId     string
+	OwnerId      uuid.UUID
+	FolderId     uuid.UUID
 	FileStoreKey string
 	FileSize     int64
 	CreatedAt    time.Time
