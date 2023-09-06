@@ -449,6 +449,40 @@ func TestFileDownload(t *testing.T) {
 	)
 }
 
+func TestCreateFolder(t *testing.T) {
+	route := "/folder"
+	t.Run(`Given an authenticated user with valid credentials
+        When the user sends a request to create a folder with a name
+        Then the server should respond with an OK status code 
+        And the response body should contain the created folder information
+        And the folder should be stored in the database with the correct owner
+      `,
+		func(t *testing.T) {
+			email := "mikesmith" + fmt.Sprint(tests.GenerateUniqueId()) + "@gmail.com"
+			password := "some-password"
+
+			userId := createUser(t, "mike", "smith", email, password)
+			token := logUserIn(email, password)
+			folderName := "some-new-folder"
+
+			requestBody := []byte(fmt.Sprintf(`{
+      "folder_name": "%s"
+      }`, folderName))
+			req, _ := http.NewRequest(http.MethodPost, route, bytes.NewBuffer(requestBody))
+
+			req.Header.Set("Authorization", "Bearer "+token)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusOK, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "folder created successfully")
+			data := responseBody["data"].(map[string]interface{})
+			tests.AssertResponseMessage(t, data["folder_name"].(string), folderName)
+			tests.AssertResponseMessage(t, data["owner_id"].(string), userId)
+		},
+	)
+}
+
 func uploadFile(t testing.TB, fileSize int64, fileName, accessToken string) string {
 	t.Helper()
 	route := "/file"
