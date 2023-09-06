@@ -12,6 +12,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -336,7 +337,7 @@ func TestFileUpload(t *testing.T) {
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 			token := logUserIn(userEmail, userPassword)
 
-			userId := getCurrentUser(token)["id"].(string)
+			userId := getCurrentUser(t, token)["id"].(string)
 
 			req.Header.Set("Authorization", "Bearer "+token)
 
@@ -355,7 +356,146 @@ func TestFileUpload(t *testing.T) {
 	)
 }
 
-func getCurrentUser(token string) map[string]interface{} {
+func TestFileDownload(t *testing.T) {
+	route := "/file"
+	t.Run(`Given an authenticated user
+        When they try to download a file using a valid fileId
+        Then the API should return a 200 OK response
+        And the download url shoudld be sent in the response body
+      `,
+		func(t *testing.T) {
+			fileSize := int64(1024)
+			token := logUserIn(userEmail, userPassword)
+			fileId := uploadFile(t, fileSize, "someFile", token)
+
+			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusOK, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "download url generated successfully")
+			data := responseBody["data"].(map[string]interface{})
+			downloadUrl := data["download_url"].(string)
+			_, err := url.ParseRequestURI(downloadUrl)
+			if err != nil {
+				t.Errorf("downloadUrl is not a url, got url: %s ", downloadUrl)
+			}
+		},
+	)
+
+	t.Run(` Given an unauthenticated user
+      When the user attempts to download a file
+      Then the server should respond with an "Unauthorized" status code (401)
+      And the response message should indicate the user needs to log in
+      `,
+		func(t *testing.T) {
+			fileSize := int64(1024)
+			token := logUserIn(userEmail, userPassword)
+			fileId := uploadFile(t, fileSize, "someFile", token)
+
+			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
+			emptyBearerToken := ""
+			req.Header.Set("Authorization", "Bearer "+emptyBearerToken)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusUnauthorized, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "unauthorized")
+		},
+	)
+	t.Run(` Given an authenticated user with valid credentials
+      When the user attempts to download a file they don't own
+      Then the server should respond with a "Forbidden" status code (403)
+      And the response message should indicate access is denied
+      `,
+		func(t *testing.T) {
+			fileSize := int64(1024)
+			fileOwnerToken := logUserIn(userEmail, userPassword)
+			fileId := uploadFile(t, fileSize, "someFile", fileOwnerToken)
+
+			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
+
+			newUserEmail := "mikesmith" + fmt.Sprint(tests.GenerateUniqueId()) + "@gmail.com"
+			newUserPassword := "some-password"
+			_ = createUser(t, "mike", "smith", newUserEmail, newUserPassword)
+			currentUserToken := logUserIn(newUserEmail, newUserPassword)
+
+			req.Header.Set("Authorization", "Bearer "+currentUserToken)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusForbidden, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "unauthorized to view this file")
+		},
+	)
+	t.Run(` Given an authenticated user with valid credentials
+          When the user requests to download a non-existent file
+          Then the server should respond with a "Not Found" status code (404)
+          And the response message should indicate the file was not found
+        `,
+		func(t *testing.T) {
+			token := logUserIn(userEmail, userPassword)
+
+			fileId := "6372ad3a-f9b4-4ff9-b7a3-c3f0a42be194"
+			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusNotFound, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "file does not exist")
+		},
+	)
+}
+
+func uploadFile(t testing.TB, fileSize int64, fileName, accessToken string) string {
+	t.Helper()
+	route := "/file"
+	fieldName := "file"
+
+	tempFile, fileCleanUp := openImageFile(t, fileName, fileSize)
+
+	defer fileCleanUp()
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+
+	createFormFile(t, writer, tempFile, fieldName)
+	writer.Close()
+
+	req, _ := http.NewRequest(http.MethodPost, route, &requestBody)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	response := ExecuteRequestMultiPart(req, svr)
+	responseBody := tests.ParseResponse(response)
+
+	data := responseBody["data"].(map[string]interface{})
+	fileId := data["id"].(string)
+
+	return fileId
+}
+
+func createUser(t testing.TB, firstName, lastName, email, password string) string {
+	t.Helper()
+	route := "/users"
+	requestBody := []byte(fmt.Sprintf(`{
+      "first_name": "%s",
+      "last_name": "%s",
+      "email": "%s",
+      "password": "%s"
+      }`, firstName, lastName, email, password))
+	req, _ := http.NewRequest(http.MethodPost, route, bytes.NewBuffer(requestBody))
+	response := tests.ExecuteRequest(req, svr)
+	data := tests.ParseResponse(response)["data"].(map[string]interface{})
+	userId := data["id"].(string)
+
+	return userId
+}
+
+func getCurrentUser(t testing.TB, token string) map[string]interface{} {
+	t.Helper()
 	req, _ := http.NewRequest(http.MethodGet, "/users/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	response := tests.ExecuteRequest(req, svr)
@@ -429,6 +569,7 @@ func createFormFile(t testing.TB, writer *multipart.Writer, tempFile *os.File, f
 }
 
 func createFormField(t testing.TB, writer *multipart.Writer, key, value string) {
+	t.Helper()
 	formField, err := writer.CreateFormField(key)
 	if err != nil {
 		t.Fatal("Error creating form field :", err)
