@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -61,16 +62,39 @@ func NewAwsFileStore(ctx context.Context, configurations *config.Configurations)
 func (a *AwsFileStore) SaveToFileStore(ctx context.Context, filename string, file io.Reader) (string, error) {
 	uploader := s3manager.NewUploader(a.session)
 	bucket := a.Bucket
-	result, err := uploader.Upload(&s3manager.UploadInput{
+	key := filename
+	_, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: bucket,
-		Key:    aws.String(filename),
+		Key:    aws.String(key),
 		Body:   file,
 	})
 	if err != nil {
 		return "", fmt.Errorf("Unable to upload %q to %q, %v", filename, bucket, err)
 	}
 
-	return result.Location, nil
+	return key, nil
+}
+
+func (a *AwsFileStore) GetDownloadUrl(ctx context.Context, key string) (string, error) {
+	downloadUrl, err := a.generatePreSignedUrl(ctx, key)
+	if err != nil {
+		return "", fmt.Errorf("error getting download url", err)
+	}
+	return downloadUrl, nil
+}
+
+func (a *AwsFileStore) generatePreSignedUrl(ctx context.Context, key string) (string, error) {
+	req, _ := a.Client.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: a.Bucket,
+		Key:    aws.String(key),
+	})
+
+	urlStr, err := req.Presign(15 * time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("Error generating presigned url: %w", err)
+	}
+
+	return urlStr, nil
 }
 
 func (a *AwsFileStore) GetOne(ctx context.Context, key string) (string, error) {

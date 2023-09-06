@@ -21,12 +21,14 @@ func ExecuteRequest(req *http.Request, s *server.Server) *httptest.ResponseRecor
 }
 
 func AssertStatusCode(t *testing.T, expected, actual int) {
+	t.Helper()
 	if expected != actual {
 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
 	}
 }
 
 func AssertResponseMessage(t *testing.T, got, expected string) {
+	t.Helper()
 	if got != expected {
 		t.Errorf("got message: %q expected: %q", got, expected)
 	}

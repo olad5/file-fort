@@ -47,7 +47,7 @@ func (f FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 			"id":              uploadedFile.ID,
 			"file_name":       uploadedFile.FileName,
 			"file_size":       uploadedFile.FileSize,
-			"file_store_link": uploadedFile.FileStoreLink,
+			"file_store_link": uploadedFile.FileStoreKey,
 			"owner_id":        uploadedFile.OwnerId,
 			"folder_id":       uploadedFile.FolderId,
 			"created_at":      uploadedFile.CreatedAt,

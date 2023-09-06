@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/olad5/go-cloud-backup-system/internal/domain"
 )
 
@@ -25,7 +26,7 @@ type UserRepository interface {
 type FileRepository interface {
 	Ping(ctx context.Context) error
 	SaveFile(ctx context.Context, file domain.File) error
-	GetFileByFileId(ctx context.Context, fileId string) (domain.File, error)
+	GetFileByFileId(ctx context.Context, fileId uuid.UUID) (domain.File, error)
 	GetFilesByFolderId(ctx context.Context, folderId string) ([]domain.File, error)
 }
 
@@ -37,4 +38,5 @@ type FolderRepository interface {
 type FileStore interface {
 	Ping(ctx context.Context) error
 	SaveToFileStore(ctx context.Context, filename string, file io.Reader) (string, error)
+	GetDownloadUrl(ctx context.Context, key string) (string, error)
 }

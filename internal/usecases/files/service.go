@@ -54,17 +54,17 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 		}
 	}
 
-	fileStoreLink, err := f.fileStore.SaveToFileStore(ctx, filename, file)
+	fileStoreKey, err := f.fileStore.SaveToFileStore(ctx, filename, file)
 	if err != nil {
 		return domain.File{}, fmt.Errorf("unable to save to file Store :%w", err)
 	}
 
 	newFile := domain.File{
-		ID:            uuid.New(),
-		OwnerId:       userId,
-		FileStoreLink: fileStoreLink,
-		FolderId:      folderId,
-		FileName:      filename,
+		ID:           uuid.New(),
+		OwnerId:      userId,
+		FileStoreKey: fileStoreKey,
+		FolderId:     folderId,
+		FileName:     filename,
 	}
 
 	err = f.fileRepo.SaveFile(ctx, newFile)
@@ -72,6 +72,21 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 		return domain.File{}, err
 	}
 	return newFile, nil
+}
+
+func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (string, error) {
+	userId := ctx.Value("userId").(string)
+
+	file, err := f.fileRepo.GetFileByFileId(ctx, fileId)
+	if err != nil {
+		return "", err
+	}
+	if file.OwnerId != userId {
+		return "", infra.ErrUserNotAuthorized
+	}
+
+	fileUrl, err := f.fileStore.GetDownloadUrl(ctx, file.FileStoreKey)
+	return fileUrl, nil
 }
 
 func getDefaultFolder(ctx context.Context, f *FileService, userId string) (domain.Folder, error) {
@@ -98,11 +113,4 @@ func getDefaultFolder(ctx context.Context, f *FileService, userId string) (domai
 		return domain.Folder{}, fmt.Errorf("error creating default folder: %w", err)
 	}
 	return newFolder, nil
-}
-
-func (f *FileService) DownloadFile(ctx context.Context, encodedString string) (domain.File, error) {
-	fileFromDb := domain.File{
-		ID: uuid.New(),
-	}
-	return fileFromDb, nil
 }

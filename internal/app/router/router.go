@@ -34,6 +34,7 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 		r.Use(auth.AuthMiddleware(authService))
 
 		r.Get("/users/me", userHandler.GetLoggedInUser)
+		r.Get("/file/{id}", fileHandler.Download)
 	})
 
 	// -------------------------------------------------------------------------
@@ -42,7 +43,6 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 		r.Use(middleware.AllowContentType("multipart/form-data"))
 		r.Use(auth.AuthMiddleware(authService))
 
-		r.Post("/file", fileHandler.Upload)
 		r.Post("/file", fileHandler.Upload)
 	})
 
