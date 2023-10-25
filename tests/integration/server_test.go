@@ -17,21 +17,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/olad5/go-cloud-backup-system/config/data"
-	"github.com/olad5/go-cloud-backup-system/internal/infra/aws"
+	"github.com/olad5/file-fort/config/data"
+	"github.com/olad5/file-fort/internal/infra/aws"
 
-	fileHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/files"
-	userHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
-	fileServices "github.com/olad5/go-cloud-backup-system/internal/usecases/files"
+	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
+	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
+	fileServices "github.com/olad5/file-fort/internal/usecases/files"
 
-	"github.com/olad5/go-cloud-backup-system/config"
-	"github.com/olad5/go-cloud-backup-system/internal/app/router"
-	"github.com/olad5/go-cloud-backup-system/internal/infra/postgres"
-	"github.com/olad5/go-cloud-backup-system/internal/infra/redis"
-	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
-	"github.com/olad5/go-cloud-backup-system/internal/usecases/users"
-	"github.com/olad5/go-cloud-backup-system/pkg/app/server"
-	"github.com/olad5/go-cloud-backup-system/tests"
+	"github.com/olad5/file-fort/config"
+	"github.com/olad5/file-fort/internal/app/router"
+	"github.com/olad5/file-fort/internal/infra/postgres"
+	"github.com/olad5/file-fort/internal/infra/redis"
+	"github.com/olad5/file-fort/internal/services/auth"
+	"github.com/olad5/file-fort/internal/usecases/users"
+	"github.com/olad5/file-fort/pkg/app/server"
+	"github.com/olad5/file-fort/tests"
 )
 
 var (
@@ -361,12 +361,12 @@ func TestFileDownload(t *testing.T) {
 	t.Run(`Given an authenticated user
         When they try to download a file using a valid fileId
         Then the API should return a 200 OK response
-        And the download url shoudld be sent in the response body
+        And the download url should be sent in the response body
       `,
 		func(t *testing.T) {
 			fileSize := int64(1024)
 			token := logUserIn(userEmail, userPassword)
-			fileId := uploadFile(t, fileSize, "someFile", token)
+			fileId := uploadFile(t, fileSize, "someFile", "", token)
 
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
 			req.Header.Set("Authorization", "Bearer "+token)
@@ -392,7 +392,7 @@ func TestFileDownload(t *testing.T) {
 		func(t *testing.T) {
 			fileSize := int64(1024)
 			token := logUserIn(userEmail, userPassword)
-			fileId := uploadFile(t, fileSize, "someFile", token)
+			fileId := uploadFile(t, fileSize, "someFile", "", token)
 
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
 			emptyBearerToken := ""
@@ -412,7 +412,7 @@ func TestFileDownload(t *testing.T) {
 		func(t *testing.T) {
 			fileSize := int64(1024)
 			fileOwnerToken := logUserIn(userEmail, userPassword)
-			fileId := uploadFile(t, fileSize, "someFile", fileOwnerToken)
+			fileId := uploadFile(t, fileSize, "someFile", "", fileOwnerToken)
 
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
 
@@ -483,7 +483,71 @@ func TestCreateFolder(t *testing.T) {
 	)
 }
 
-func uploadFile(t testing.TB, fileSize int64, fileName, accessToken string) string {
+func TestGetFilesInFolder(t *testing.T) {
+	t.Run(`Given a user is authenticated,
+      When they request to access files in a specific folder,
+      Then the API should return a list of files in the folder with appropriate 
+      metadata.
+      `,
+		func(t *testing.T) {
+			email := "mikesmith" + fmt.Sprint(tests.GenerateUniqueId()) + "@gmail.com"
+			password := "some-password"
+
+			_ = createUser(t, "mike", "smith", email, password)
+			token := logUserIn(email, password)
+			userId := getCurrentUser(t, token)["id"].(string)
+			folderName := "some-new-folder"
+
+			folderId := createFolder(t, folderName, token)
+			fileSize := int64(1024)
+			fileIds := []string{}
+			numberOfFiles := 3
+			for i := 0; i < numberOfFiles; i++ {
+				fileId := uploadFile(t, fileSize, "someFile"+fmt.Sprint(tests.GenerateUniqueId()), folderId, token)
+				fileIds = append(fileIds, fileId)
+
+			}
+			route := "/folder/" + folderId + "/files" + "?page=1&rows=20"
+			requestBody := []byte(fmt.Sprintf(`{
+      "folder_name": "%s"
+      }`, folderName))
+			req, _ := http.NewRequest(http.MethodGet, route, bytes.NewBuffer(requestBody))
+
+			req.Header.Set("Authorization", "Bearer "+token)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusOK, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "files retreived successfully")
+			data := responseBody["data"].(map[string]interface{})
+			files := data["files"].([]interface{})
+			tests.AssertResponseMessage(t, data["folder_id"].(string), folderId)
+			tests.AssertResponseMessage(t, data["owner_id"].(string), userId)
+			if len(files) != numberOfFiles {
+				t.Errorf("got files length: %d expected: %d", len(files), numberOfFiles)
+			}
+		},
+	)
+}
+
+func createFolder(t testing.TB, folderName, accessToken string) string {
+	t.Helper()
+	route := "/folder"
+
+	requestBody := []byte(fmt.Sprintf(`{
+      "folder_name": "%s"
+      }`, folderName))
+	req, _ := http.NewRequest(http.MethodPost, route, bytes.NewBuffer(requestBody))
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	response := tests.ExecuteRequest(req, svr)
+	responseBody := tests.ParseResponse(response)
+	data := responseBody["data"].(map[string]interface{})
+	folderId := data["id"].(string)
+	return folderId
+}
+
+func uploadFile(t testing.TB, fileSize int64, fileName, folderId, accessToken string) string {
 	t.Helper()
 	route := "/file"
 	fieldName := "file"
@@ -495,6 +559,7 @@ func uploadFile(t testing.TB, fileSize int64, fileName, accessToken string) stri
 	writer := multipart.NewWriter(&requestBody)
 
 	createFormFile(t, writer, tempFile, fieldName)
+	createFormField(t, writer, "folder_id", folderId)
 	writer.Close()
 
 	req, _ := http.NewRequest(http.MethodPost, route, &requestBody)
@@ -504,7 +569,6 @@ func uploadFile(t testing.TB, fileSize int64, fileName, accessToken string) stri
 
 	response := ExecuteRequestMultiPart(req, svr)
 	responseBody := tests.ParseResponse(response)
-
 	data := responseBody["data"].(map[string]interface{})
 	fileId := data["id"].(string)
 

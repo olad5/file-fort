@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
+	"github.com/olad5/file-fort/internal/services/auth"
 
 	"github.com/google/uuid"
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
+	"github.com/olad5/file-fort/internal/domain"
+	"github.com/olad5/file-fort/internal/infra"
 	"golang.org/x/crypto/bcrypt"
 )
 

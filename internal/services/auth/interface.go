@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
+	"github.com/olad5/file-fort/internal/domain"
 )
 
 type AuthService interface {

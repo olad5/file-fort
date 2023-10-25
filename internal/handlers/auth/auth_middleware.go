@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
-	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
-	response "github.com/olad5/go-cloud-backup-system/pkg/utils"
+	"github.com/olad5/file-fort/internal/services/auth"
+	appErrors "github.com/olad5/file-fort/pkg/errors"
+	response "github.com/olad5/file-fort/pkg/utils"
 )
 
 func AuthMiddleware(authService auth.AuthService) func(next http.Handler) http.Handler {

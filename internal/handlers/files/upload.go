@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
-	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
+	"github.com/olad5/file-fort/internal/infra"
+	appErrors "github.com/olad5/file-fort/pkg/errors"
 
-	response "github.com/olad5/go-cloud-backup-system/pkg/utils"
+	response "github.com/olad5/file-fort/pkg/utils"
 )
 
 const MAX_UPLOAD_SIZE = 1024 * 1024 * 200 // 1MB * 200
@@ -42,15 +42,5 @@ func (f FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	response.SuccessResponse(w, "file uploaded successfully",
-		map[string]interface{}{
-			"id":              uploadedFile.ID,
-			"file_name":       uploadedFile.FileName,
-			"file_size":       uploadedFile.FileSize,
-			"file_store_link": uploadedFile.FileStoreKey,
-			"owner_id":        uploadedFile.OwnerId,
-			"folder_id":       uploadedFile.FolderId,
-			"created_at":      uploadedFile.CreatedAt,
-			"updated_at":      uploadedFile.UpdatedAt,
-		})
+	response.SuccessResponse(w, "file uploaded successfully", ToResponseFile(uploadedFile))
 }

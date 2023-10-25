@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/olad5/go-cloud-backup-system/config"
+	"github.com/olad5/file-fort/config"
 )
 
 type RedisCache struct {

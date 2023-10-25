@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
-	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
-	response "github.com/olad5/go-cloud-backup-system/pkg/utils"
+	"github.com/olad5/file-fort/internal/infra"
+	appErrors "github.com/olad5/file-fort/pkg/errors"
+	response "github.com/olad5/file-fort/pkg/utils"
 )
 
 func (u UserHandler) GetLoggedInUser(w http.ResponseWriter, r *http.Request) {

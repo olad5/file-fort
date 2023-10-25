@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
+	"github.com/olad5/file-fort/internal/domain"
+	"github.com/olad5/file-fort/internal/infra"
 )
 
 type PostgresFileRepository struct {
@@ -68,10 +68,17 @@ func (p *PostgresFileRepository) GetFileByFileId(ctx context.Context, fileId uui
 	return toDomainFile(file), nil
 }
 
-func (p *PostgresFileRepository) GetFilesByFolderId(ctx context.Context, folderId uuid.UUID) ([]domain.File, error) {
+func (p *PostgresFileRepository) GetFilesByFolderId(ctx context.Context, folderId uuid.UUID, pageNumber, rowsPerPage int) ([]domain.File, error) {
+	offset := (pageNumber - 1) * rowsPerPage
+
 	var files []SqlxFile
 
-	err := p.connection.Select(&files, "SELECT * FROM files WHERE folder_id=$1", folderId)
+	query := fmt.Sprintf(`
+    SELECT * FROM files WHERE folder_id =$1
+    OFFSET %d ROWS FETCH NEXT %d ROWS ONLY
+	`, offset, rowsPerPage)
+
+	err := p.connection.Select(&files, query, folderId)
 	if err != nil {
 		return []domain.File{}, fmt.Errorf("error getting files :%w", err)
 	}

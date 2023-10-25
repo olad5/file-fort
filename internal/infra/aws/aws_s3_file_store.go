@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/olad5/go-cloud-backup-system/config"
+	"github.com/olad5/file-fort/config"
 )
 
 type AwsFileStore struct {

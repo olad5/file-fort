@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/google/uuid"
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
+	"github.com/olad5/file-fort/internal/domain"
 )
 
 var (
@@ -27,10 +27,11 @@ type FileRepository interface {
 	Ping(ctx context.Context) error
 	SaveFile(ctx context.Context, file domain.File) error
 	GetFileByFileId(ctx context.Context, fileId uuid.UUID) (domain.File, error)
-	GetFilesByFolderId(ctx context.Context, folderId uuid.UUID) ([]domain.File, error)
+	GetFilesByFolderId(ctx context.Context, folderId uuid.UUID, pageNumber, rowsPerPage int) ([]domain.File, error)
 }
 
 type FolderRepository interface {
+	Ping(ctx context.Context) error
 	CreateFolder(ctx context.Context, folder domain.Folder) error
 	GetFolderByFolderId(ctx context.Context, folderId uuid.UUID) (domain.Folder, error)
 }

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/olad5/go-cloud-backup-system/config"
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
+	"github.com/olad5/file-fort/config"
+	"github.com/olad5/file-fort/internal/domain"
+	"github.com/olad5/file-fort/internal/infra"
 )
 
 type RedisAuthService struct {

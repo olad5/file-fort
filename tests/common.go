@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/olad5/go-cloud-backup-system/pkg/app/server"
+	"github.com/olad5/file-fort/pkg/app/server"
 )
 
 func ExecuteRequest(req *http.Request, s *server.Server) *httptest.ResponseRecorder {

@@ -5,19 +5,19 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/olad5/go-cloud-backup-system/config/data"
+	"github.com/olad5/file-fort/config/data"
 
-	"github.com/olad5/go-cloud-backup-system/config"
-	"github.com/olad5/go-cloud-backup-system/internal/app/router"
-	fileHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/files"
-	userHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
-	"github.com/olad5/go-cloud-backup-system/internal/infra/aws"
-	"github.com/olad5/go-cloud-backup-system/internal/infra/postgres"
-	"github.com/olad5/go-cloud-backup-system/internal/infra/redis"
-	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
-	fileServices "github.com/olad5/go-cloud-backup-system/internal/usecases/files"
-	"github.com/olad5/go-cloud-backup-system/internal/usecases/users"
-	"github.com/olad5/go-cloud-backup-system/pkg/app/server"
+	"github.com/olad5/file-fort/config"
+	"github.com/olad5/file-fort/internal/app/router"
+	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
+	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
+	"github.com/olad5/file-fort/internal/infra/aws"
+	"github.com/olad5/file-fort/internal/infra/postgres"
+	"github.com/olad5/file-fort/internal/infra/redis"
+	"github.com/olad5/file-fort/internal/services/auth"
+	fileServices "github.com/olad5/file-fort/internal/usecases/files"
+	"github.com/olad5/file-fort/internal/usecases/users"
+	"github.com/olad5/file-fort/pkg/app/server"
 )
 
 func main() {

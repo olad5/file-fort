@@ -2,18 +2,18 @@ version: '3.1'
 
 services:
   database:
-    container_name: test-go-cloud-backup-system-postgres
+    container_name: test-file-fort-postgres
     image: postgres:14.5
     command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c random_page_cost=1.0
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=newPassword
-      - POSTGRES_DB=test-go-cloud-backup-system
+      - POSTGRES_DB=test-file-fort
     ports:
       - '5247:5432'
 
   adminer:
-    container_name: test-go-cloud-backup-system-adminer
+    container_name: test-file-fort-adminer
     image: adminer:4.8.1
     environment:
       ADMINER_DEFAULT_SERVER: postgresql
@@ -22,13 +22,13 @@ services:
       - "7080:8080"
 
   redis:
-    container_name: test-go-cloud-backup-system-redis
+    container_name: test-file-fort-redis
     image: redis:6.2-alpine
     ports:
       - "5080:6379"
 
   s3_storage:
-    container_name: test-go-cloud-backup-system-localstack
+    container_name: test-file-fort-localstack
     image: localstack/localstack:2.2.0 
     environment:
       LOCALSTACK_API_KEY: ${LOCALSTACK_API_KEY:- }

@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/olad5/go-cloud-backup-system/internal/handlers/auth"
-	fileHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/files"
-	userHandlers "github.com/olad5/go-cloud-backup-system/internal/handlers/users"
-	authService "github.com/olad5/go-cloud-backup-system/internal/services/auth"
+	"github.com/olad5/file-fort/internal/handlers/auth"
+	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
+	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
+	authService "github.com/olad5/file-fort/internal/services/auth"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -36,6 +36,7 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 		r.Get("/users/me", userHandler.GetLoggedInUser)
 		r.Get("/file/{id}", fileHandler.Download)
 		r.Post("/folder", fileHandler.CreateFolder)
+		r.Get("/folder/{id}/files", fileHandler.GetFilesByFolderId)
 	})
 
 	// -------------------------------------------------------------------------

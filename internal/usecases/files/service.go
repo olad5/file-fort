@@ -7,9 +7,9 @@ import (
 	"mime/multipart"
 
 	"github.com/google/uuid"
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
-	appErrors "github.com/olad5/go-cloud-backup-system/pkg/errors"
+	"github.com/olad5/file-fort/internal/domain"
+	"github.com/olad5/file-fort/internal/infra"
+	appErrors "github.com/olad5/file-fort/pkg/errors"
 )
 
 type FileService struct {
@@ -48,7 +48,7 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 		}
 		folderId = defaultFolder.ID
 	} else {
-		folderId, err := uuid.Parse(ctx.Value("folderId").(string))
+		folderId, err = uuid.Parse(ctx.Value("folderId").(string))
 		if err != nil {
 			return domain.File{}, appErrors.ErrInvalidID
 		}
@@ -119,6 +119,28 @@ func (f *FileService) CreateFolder(ctx context.Context, folderName string) (doma
 	}
 
 	return newFolder, nil
+}
+
+func (f *FileService) GetFilesByFolderId(ctx context.Context, folderId uuid.UUID, pageNumber, rowsPerPage int) ([]domain.File, error) {
+	userId, err := uuid.Parse(ctx.Value("userId").(string))
+	if err != nil {
+		return []domain.File{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	}
+
+	existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, folderId)
+	if err != nil {
+		return []domain.File{}, err
+	}
+	if existingFolder.OwnerId != userId {
+		return []domain.File{}, infra.ErrUserNotAuthorized
+	}
+
+	files, err := f.fileRepo.GetFilesByFolderId(ctx, existingFolder.ID, pageNumber, rowsPerPage)
+	if err != nil {
+		return []domain.File{}, err
+	}
+
+	return files, nil
 }
 
 func getDefaultFolder(ctx context.Context, f *FileService, userId uuid.UUID) (domain.Folder, error) {

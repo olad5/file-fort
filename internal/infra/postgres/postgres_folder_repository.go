@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/olad5/go-cloud-backup-system/internal/domain"
-	"github.com/olad5/go-cloud-backup-system/internal/infra"
+	"github.com/olad5/file-fort/internal/domain"
+	"github.com/olad5/file-fort/internal/infra"
 )
 
 type PostgresFolderRepository struct {

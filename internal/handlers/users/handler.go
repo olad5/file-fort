@@ -3,8 +3,8 @@ package handlers
 import (
 	"errors"
 
-	"github.com/olad5/go-cloud-backup-system/internal/services/auth"
-	"github.com/olad5/go-cloud-backup-system/internal/usecases/users"
+	"github.com/olad5/file-fort/internal/services/auth"
+	"github.com/olad5/file-fort/internal/usecases/users"
 )
 
 type UserHandler struct {
