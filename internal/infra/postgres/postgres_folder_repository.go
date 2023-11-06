@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-
 	"github.com/olad5/file-fort/internal/domain"
 	"github.com/olad5/file-fort/internal/infra"
 )
@@ -20,18 +19,6 @@ func NewPostgresFolderRepo(ctx context.Context, connection *sqlx.DB) (*PostgresF
 	if connection == nil {
 		return &PostgresFolderRepository{}, fmt.Errorf("Failed to create PostgresFolderRepository: connection is nil")
 	}
-	const folderSchema = `
-  CREATE TABLE IF NOT EXISTS folders(
-      id UUID PRIMARY KEY,
-      folder_name varchar(255) NOT NULL,
-      owner_id UUID NOT NULL REFERENCES users(id), 
-      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
-`
-
-	connection.MustExec(folderSchema)
 	return &PostgresFolderRepository{connection: connection}, nil
 }
 

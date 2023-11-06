@@ -51,6 +51,11 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 
 	postgresConnection := data.StartPostgres(configurations.DatabaseUrl)
+
+	if err := postgres.Migrate(ctx, postgresConnection); err != nil {
+		log.Fatal("Error Migrating postgres", err)
+	}
+
 	userRepo, err := postgres.NewPostgresUserRepo(ctx, postgresConnection)
 	if err != nil {
 		log.Fatal("Error Initializing User Repo")

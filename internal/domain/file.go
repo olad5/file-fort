@@ -13,6 +13,7 @@ type File struct {
 	FolderId     uuid.UUID
 	FileStoreKey string
 	FileSize     int64
+	IsUnsafe     bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

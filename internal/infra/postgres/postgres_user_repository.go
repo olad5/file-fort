@@ -20,20 +20,6 @@ func NewPostgresUserRepo(ctx context.Context, connection *sqlx.DB) (*PostgresUse
 	if connection == nil {
 		return &PostgresUserRepository{}, fmt.Errorf("Failed to create PostgresFileRepository: connection is nil")
 	}
-
-	const userSchema = `
-  CREATE TABLE IF NOT EXISTS users(
-      id UUID PRIMARY KEY,
-      email TEXT NOT NULL UNIQUE,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      password TEXT NOT NULL,
-      role TEXT NOT NULL,
-      CHECK (role IN ('regular', 'admin'))
-  );
-
-`
-	connection.MustExec(userSchema)
 	return &PostgresUserRepository{connection: connection}, nil
 }
 

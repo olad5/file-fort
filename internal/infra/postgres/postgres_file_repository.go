@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
-
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-
+	_ "github.com/lib/pq"
 	"github.com/olad5/file-fort/internal/domain"
 	"github.com/olad5/file-fort/internal/infra"
 )
@@ -23,20 +21,6 @@ func NewPostgresFileRepo(ctx context.Context, connection *sqlx.DB) (*PostgresFil
 		return &PostgresFileRepository{}, fmt.Errorf("Failed to create PostgresFileRepository:  connection is nil")
 	}
 
-	const fileSchema = `
-  CREATE TABLE IF NOT EXISTS files(
-      id UUID PRIMARY KEY,
-      file_name varchar(255) NOT NULL,
-      owner_id UUID NOT NULL REFERENCES users(id), 
-      folder_id UUID NOT NULL REFERENCES folders(id), 
-      file_store_key varchar(255) NOT NULL,
-      file_size INTEGER NOT NULL,
-      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
-`
-	connection.MustExec(fileSchema)
 	return &PostgresFileRepository{connection: connection}, nil
 }
 
@@ -107,6 +91,7 @@ type SqlxFile struct {
 	FolderId     uuid.UUID `db:"folder_id"`
 	FileStoreKey string    `db:"file_store_key"`
 	FileSize     int64     `db:"file_size"`
+	IsUnsafe     bool      `db:"is_unsafe"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
 }
@@ -119,6 +104,7 @@ func toDomainFile(f SqlxFile) domain.File {
 		FolderId:     f.FolderId,
 		FileStoreKey: f.FileStoreKey,
 		FileSize:     f.FileSize,
+		IsUnsafe:     f.IsUnsafe,
 		CreatedAt:    f.CreatedAt,
 		UpdatedAt:    f.UpdatedAt,
 	}
@@ -132,6 +118,7 @@ func toSqlxFile(f domain.File) SqlxFile {
 		FolderId:     f.FolderId,
 		FileStoreKey: f.FileStoreKey,
 		FileSize:     f.FileSize,
+		IsUnsafe:     f.IsUnsafe,
 		CreatedAt:    f.CreatedAt,
 		UpdatedAt:    f.UpdatedAt,
 	}
