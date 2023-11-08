@@ -42,8 +42,10 @@ var (
 )
 
 var (
-	userEmail    = "will@gmail.com"
-	userPassword = "some-random-password"
+	userEmail     = "will@gmail.com"
+	userPassword  = "some-random-password"
+	adminEmail    = "admin@app.com"
+	adminPassword = "some-random-password"
 )
 
 func TestMain(m *testing.M) {
@@ -54,6 +56,10 @@ func TestMain(m *testing.M) {
 
 	if err := postgres.Migrate(ctx, postgresConnection); err != nil {
 		log.Fatal("Error Migrating postgres", err)
+	}
+
+	if err := postgres.Seed(ctx, postgresConnection); err != nil {
+		log.Fatal("Error seeding postgres", err)
 	}
 
 	userRepo, err := postgres.NewPostgresUserRepo(ctx, postgresConnection)
@@ -535,6 +541,55 @@ func TestGetFilesInFolder(t *testing.T) {
 	)
 }
 
+func TestMarkFileAsUnsafe(t *testing.T) {
+	t.Run(`Given a user is authenticated and an admin,
+      When they request to mark a file as unsafe,
+      Then the file should be deleted from the file store metadata.
+      `,
+		func(t *testing.T) {
+			fileSize := int64(1024)
+			token := logUserIn(userEmail, userPassword)
+			fileId := uploadFile(t, fileSize, "someFile", "", token)
+
+			token = logUserIn(adminEmail, adminPassword)
+			req, _ := http.NewRequest(http.MethodPost, "/file"+"/"+fileId+"/mark-unsafe", nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusOK, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "file marked unsafe successfully")
+			_, err := getFileDownloadUrl(t, token, fileId)
+			if err == nil {
+				t.Errorf("got err: %s expected: %s", err, fmt.Errorf("file does not exist"))
+			}
+		},
+	)
+
+	t.Run(`Given a user is authenticated and is not an admin,
+      When they request to mark a file as unsafe,
+      Then they should get an unauthorized error message
+      `,
+		func(t *testing.T) {
+			fileSize := int64(1024)
+			token := logUserIn(userEmail, userPassword)
+			fileId := uploadFile(t, fileSize, "someFile", "", token)
+
+			req, _ := http.NewRequest(http.MethodPost, "/file"+"/"+fileId+"/mark-unsafe", nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			response := tests.ExecuteRequest(req, svr)
+			tests.AssertStatusCode(t, http.StatusUnauthorized, response.Code)
+			responseBody := tests.ParseResponse(response)
+			message := responseBody["message"].(string)
+			tests.AssertResponseMessage(t, message, "unauthorized to perform this action")
+			_, err := getFileDownloadUrl(t, token, fileId)
+			if err != nil {
+				t.Errorf("got err: %s expected: %s", err, "a download_url")
+			}
+		},
+	)
+}
+
 func createFolder(t testing.TB, folderName, accessToken string) string {
 	t.Helper()
 	route := "/folder"
@@ -605,6 +660,22 @@ func getCurrentUser(t testing.TB, token string) map[string]interface{} {
 	responseBody := tests.ParseResponse(response)
 	data := responseBody["data"].(map[string]interface{})
 	return data
+}
+
+func getFileDownloadUrl(t testing.TB, token, fileId string) (string, error) {
+	t.Helper()
+	route := "/file"
+	req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	response := tests.ExecuteRequest(req, svr)
+	responseBody := tests.ParseResponse(response)
+	message := responseBody["message"].(string)
+	if message == "file does not exist" {
+		return "", fmt.Errorf("file does not exist")
+	}
+	data := responseBody["data"].(map[string]interface{})
+
+	return data["download_url"].(string), nil
 }
 
 func logUserIn(email, password string) string {

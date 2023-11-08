@@ -26,6 +26,7 @@ type UserRepository interface {
 type FileRepository interface {
 	Ping(ctx context.Context) error
 	SaveFile(ctx context.Context, file domain.File) error
+	MarkFileAsUnsafe(ctx context.Context, file domain.File) error
 	GetFileByFileId(ctx context.Context, fileId uuid.UUID) (domain.File, error)
 	GetFilesByFolderId(ctx context.Context, folderId uuid.UUID, pageNumber, rowsPerPage int) ([]domain.File, error)
 }
@@ -40,4 +41,5 @@ type FileStore interface {
 	Ping(ctx context.Context) error
 	SaveToFileStore(ctx context.Context, filename string, file io.Reader) (string, error)
 	GetDownloadUrl(ctx context.Context, key string) (string, error)
+	DeleteFile(ctx context.Context, key string) error
 }

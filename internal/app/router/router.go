@@ -31,7 +31,7 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 			middleware.AllowContentType("application/json"),
 			middleware.SetHeader("Content-Type", "application/json"),
 		)
-		r.Use(auth.AuthMiddleware(authService))
+		r.Use(auth.EnsureAuthenticated(authService))
 
 		r.Get("/users/me", userHandler.GetLoggedInUser)
 		r.Get("/file/{id}", fileHandler.Download)
@@ -43,9 +43,22 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 
 	router.Group(func(r chi.Router) {
 		r.Use(middleware.AllowContentType("multipart/form-data"))
-		r.Use(auth.AuthMiddleware(authService))
+		r.Use(auth.EnsureAuthenticated(authService))
 
 		r.Post("/file", fileHandler.Upload)
+	})
+
+	// -------------------------------------------------------------------------
+
+	router.Group(func(r chi.Router) {
+		r.Use(
+			middleware.AllowContentType("application/json"),
+			middleware.SetHeader("Content-Type", "application/json"),
+		)
+		r.Use(auth.EnsureAuthenticated(authService))
+		r.Use(auth.AdminGuard(authService))
+
+		r.Post("/file/{id}/mark-unsafe", fileHandler.MarkFileAsUnSafe)
 	})
 
 	return router

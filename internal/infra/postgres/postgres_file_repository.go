@@ -41,7 +41,7 @@ func (p *PostgresFileRepository) SaveFile(ctx context.Context, file domain.File)
 
 func (p *PostgresFileRepository) GetFileByFileId(ctx context.Context, fileId uuid.UUID) (domain.File, error) {
 	var file SqlxFile
-	err := p.connection.Get(&file, "SELECT * FROM files WHERE id=$1", fileId)
+	err := p.connection.Get(&file, "SELECT * FROM files WHERE id=$1 AND is_unsafe=false", fileId)
 	if err != nil {
 		if err == ErrRecordNotFound {
 			return domain.File{}, infra.ErrFileNotFound
@@ -58,7 +58,7 @@ func (p *PostgresFileRepository) GetFilesByFolderId(ctx context.Context, folderI
 	var files []SqlxFile
 
 	query := fmt.Sprintf(`
-    SELECT * FROM files WHERE folder_id =$1
+    SELECT * FROM files WHERE folder_id =$1 AND is_unsafe=false
     OFFSET %d ROWS FETCH NEXT %d ROWS ONLY
 	`, offset, rowsPerPage)
 
@@ -73,6 +73,18 @@ func (p *PostgresFileRepository) GetFilesByFolderId(ctx context.Context, folderI
 	}
 
 	return result, nil
+}
+
+func (p *PostgresFileRepository) MarkFileAsUnsafe(ctx context.Context, file domain.File) error {
+	file.UpdatedAt = time.Now()
+	file.IsUnsafe = true
+
+	const query = `UPDATE files SET is_unsafe=:is_unsafe, updated_at=:updated_at WHERE id=:id`
+	_, err := p.connection.NamedExec(query, toSqlxFile(file))
+	if err != nil {
+		return fmt.Errorf("error marking file as unsafe in the db: %w", err)
+	}
+	return nil
 }
 
 func (p *PostgresFileRepository) Ping(ctx context.Context) error {

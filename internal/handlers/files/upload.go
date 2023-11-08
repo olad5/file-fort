@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -20,8 +19,6 @@ func (f FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	folderId := r.FormValue("folder_id")
-
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		response.ErrorResponse(w, "Error retrieving file, please try again", http.StatusBadRequest)
@@ -29,9 +26,9 @@ func (f FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	ctx := context.WithValue(r.Context(), "folderId", folderId)
-
-	uploadedFile, err := f.fileService.UploadFile(ctx, file, handler)
+	folderId := r.FormValue("folder_id")
+	ctx := r.Context()
+	uploadedFile, err := f.fileService.UploadFile(ctx, file, handler, folderId)
 	if err != nil {
 		switch {
 		case errors.Is(err, infra.ErrFolderNotFound):

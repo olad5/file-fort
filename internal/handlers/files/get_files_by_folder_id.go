@@ -65,7 +65,7 @@ func (f FileHandler) GetFilesByFolderId(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		switch {
 		case errors.Is(err, infra.ErrFolderNotFound):
-			response.ErrorResponse(w, "file does not exist", http.StatusNotFound)
+			response.ErrorResponse(w, "folder does not exist", http.StatusNotFound)
 			return
 		case errors.Is(err, infra.ErrUserNotAuthorized):
 			response.ErrorResponse(w, "unauthorized to view this folder", http.StatusForbidden)

@@ -79,10 +79,11 @@ func (u *UserService) LogUserIn(ctx context.Context, email, password string) (st
 }
 
 func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) {
-	userId, err := uuid.Parse(ctx.Value("userId").(string))
-	if err != nil {
-		return domain.User{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
+	if ok == false {
+		return domain.User{}, fmt.Errorf("error parsing JWTClaims")
 	}
+	userId := jwtClaims.ID
 
 	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
 	if err != nil {

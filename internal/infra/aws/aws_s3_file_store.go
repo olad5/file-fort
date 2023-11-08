@@ -97,8 +97,15 @@ func (a *AwsFileStore) generatePreSignedUrl(ctx context.Context, key string) (st
 	return urlStr, nil
 }
 
-func (a *AwsFileStore) GetOne(ctx context.Context, key string) (string, error) {
-	return "", nil
+func (a *AwsFileStore) DeleteFile(ctx context.Context, key string) error {
+	_, err := a.Client.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: a.Bucket,
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("error deleting file from file store", err)
+	}
+	return nil
 }
 
 func (a *AwsFileStore) Ping(ctx context.Context) error {

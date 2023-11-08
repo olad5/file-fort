@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/olad5/file-fort/internal/domain"
 	"github.com/olad5/file-fort/internal/infra"
+	"github.com/olad5/file-fort/internal/services/auth"
 	appErrors "github.com/olad5/file-fort/pkg/errors"
 )
 
@@ -31,29 +32,31 @@ func NewFileService(fileRepo infra.FileRepository, folderRepo infra.FolderReposi
 	return &FileService{fileRepo, fileStore, folderRepo}, nil
 }
 
-func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *multipart.FileHeader) (domain.File, error) {
-	userId, err := uuid.Parse(ctx.Value("userId").(string))
-	if err != nil {
-		return domain.File{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *multipart.FileHeader, folderId string) (domain.File, error) {
+	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
+	if ok == false {
+		return domain.File{}, fmt.Errorf("error parsing JWTClaims")
 	}
 
+	userId := jwtClaims.ID
 	filename := handler.Filename
 
-	var folderId uuid.UUID
+	var folderIdInUUID uuid.UUID
+	var err error
 
-	if ctx.Value("folderId") == "" {
+	if folderId == "" {
 		defaultFolder, err := getDefaultFolder(ctx, f, userId)
 		if err != nil {
 			return domain.File{}, err
 		}
-		folderId = defaultFolder.ID
+		folderIdInUUID = defaultFolder.ID
 	} else {
-		folderId, err = uuid.Parse(ctx.Value("folderId").(string))
+		folderIdInUUID, err = uuid.Parse(folderId)
 		if err != nil {
 			return domain.File{}, appErrors.ErrInvalidID
 		}
 
-		existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, folderId)
+		existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, folderIdInUUID)
 		if err != nil {
 			return domain.File{}, fmt.Errorf("error getting folder: %w", err)
 		}
@@ -72,7 +75,7 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 		ID:           uuid.New(),
 		OwnerId:      userId,
 		FileStoreKey: fileStoreKey,
-		FolderId:     folderId,
+		FolderId:     folderIdInUUID,
 		FileName:     filename,
 	}
 
@@ -84,10 +87,12 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 }
 
 func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (string, error) {
-	userId, err := uuid.Parse(ctx.Value("userId").(string))
-	if err != nil {
-		return "", fmt.Errorf("error parsing userId to UUID:%w", err)
+	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
+	if ok == false {
+		return "", fmt.Errorf("error parsing JWTClaims")
 	}
+
+	userId := jwtClaims.ID
 
 	file, err := f.fileRepo.GetFileByFileId(ctx, fileId)
 	if err != nil {
@@ -102,10 +107,13 @@ func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (strin
 }
 
 func (f *FileService) CreateFolder(ctx context.Context, folderName string) (domain.Folder, error) {
-	userId, err := uuid.Parse(ctx.Value("userId").(string))
-	if err != nil {
-		return domain.Folder{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
+	if ok == false {
+		return domain.Folder{}, fmt.Errorf("error parsing JWTClaims")
 	}
+
+	userId := jwtClaims.ID
+	var err error
 
 	newFolder := domain.Folder{
 		ID:         uuid.New(),
@@ -122,15 +130,17 @@ func (f *FileService) CreateFolder(ctx context.Context, folderName string) (doma
 }
 
 func (f *FileService) GetFilesByFolderId(ctx context.Context, folderId uuid.UUID, pageNumber, rowsPerPage int) ([]domain.File, error) {
-	userId, err := uuid.Parse(ctx.Value("userId").(string))
-	if err != nil {
-		return []domain.File{}, fmt.Errorf("error parsing userId to UUID:%w", err)
+	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
+	if ok == false {
+		return []domain.File{}, fmt.Errorf("error parsing JWTClaims")
 	}
 
+	userId := jwtClaims.ID
 	existingFolder, err := f.folderRepo.GetFolderByFolderId(ctx, folderId)
 	if err != nil {
 		return []domain.File{}, err
 	}
+
 	if existingFolder.OwnerId != userId {
 		return []domain.File{}, infra.ErrUserNotAuthorized
 	}
@@ -162,4 +172,27 @@ func getDefaultFolder(ctx context.Context, f *FileService, userId uuid.UUID) (do
 		return domain.Folder{}, fmt.Errorf("error creating default folder: %w", err)
 	}
 	return newFolder, nil
+}
+
+func (f *FileService) MarkFileAsUnsafe(ctx context.Context, fileId uuid.UUID) error {
+	file, err := f.fileRepo.GetFileByFileId(ctx, fileId)
+	if err != nil {
+		return err
+	}
+
+	if file.IsUnsafe == true {
+		return nil
+	}
+
+	err = f.fileStore.DeleteFile(ctx, file.FileStoreKey)
+	if err != nil {
+		return err
+	}
+
+	err = f.fileRepo.MarkFileAsUnsafe(ctx, file)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
