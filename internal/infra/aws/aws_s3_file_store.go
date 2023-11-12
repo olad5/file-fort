@@ -36,20 +36,12 @@ func NewAwsFileStore(ctx context.Context, configurations *config.Configurations)
 	svc := s3.New(sess)
 
 	bucket := aws.String(configurations.AwsS3Bucket)
-	_, err = svc.CreateBucket(&s3.CreateBucketInput{
+
+	_, err = svc.HeadBucket(&s3.HeadBucketInput{
 		Bucket: bucket,
 	})
-
 	if err != nil {
-		return &AwsFileStore{}, fmt.Errorf("Unable to create S3 bucket %q, %v", bucket, err)
-	}
-
-	err = svc.WaitUntilBucketExists(&s3.HeadBucketInput{
-		Bucket: bucket,
-	})
-
-	if err != nil {
-		return &AwsFileStore{}, fmt.Errorf("Unable to create S3 bucket after Waiting %q, %v", bucket, err)
+		return &AwsFileStore{}, fmt.Errorf("Unable to retrieve S3 bucket %v", err)
 	}
 
 	return &AwsFileStore{

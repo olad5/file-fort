@@ -2,7 +2,7 @@ app.docker.test.stop:
 	docker compose --file ./tests/config/docker-compose.yml  down --remove-orphans
 
 app.docker.test.start:
-	docker compose --file ./tests/config/docker-compose.yml  up -d  && sleep 1.5
+	docker compose --file ./tests/config/docker-compose.yml  up -d  
 
 test: app.docker.test.start
 		go test -count=1 -tags integration  ./tests/integration/

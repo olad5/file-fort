@@ -16,16 +16,21 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/olad5/file-fort/config/data"
-	"github.com/olad5/file-fort/internal/infra/aws"
+	awsSDK "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 
 	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
 	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
 	fileServices "github.com/olad5/file-fort/internal/usecases/files"
 
 	"github.com/olad5/file-fort/config"
+	"github.com/olad5/file-fort/config/data"
 	"github.com/olad5/file-fort/internal/app/router"
+	"github.com/olad5/file-fort/internal/infra/aws"
 	"github.com/olad5/file-fort/internal/infra/postgres"
 	"github.com/olad5/file-fort/internal/infra/redis"
 	"github.com/olad5/file-fort/internal/services/auth"
@@ -49,6 +54,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	time.Sleep(8 * time.Second) // Wait for docker containers to start
 	configurations = config.GetConfig("../config/.test.env")
 	ctx := context.Background()
 
@@ -100,6 +106,10 @@ func TestMain(m *testing.M) {
 	fileRepo, err := postgres.NewPostgresFileRepo(ctx, postgresConnection)
 	if err != nil {
 		log.Fatal("Error Initializing File Repo", err)
+	}
+
+	if err := createS3BucketForTest(ctx, configurations); err != nil {
+		log.Fatal("Error creating s3 bucket for test", err)
 	}
 
 	fileStore, err := aws.NewAwsFileStore(ctx, configurations)
@@ -759,4 +769,31 @@ func ExecuteRequestMultiPart(req *http.Request, s *server.Server) *httptest.Resp
 	s.Router.ServeHTTP(rr, req)
 
 	return rr
+}
+
+func createS3BucketForTest(ctx context.Context, configurations *config.Configurations) error {
+	region := configurations.AwsRegion
+
+	sess, err := session.NewSession(&awsSDK.Config{
+		Region:           awsSDK.String(region),
+		Credentials:      credentials.NewStaticCredentials(configurations.AwsAccessKey, configurations.AwsSecretKey, ""),
+		S3ForcePathStyle: awsSDK.Bool(true),
+		Endpoint:         awsSDK.String(configurations.AwsEndpoint),
+	})
+	if err != nil {
+		return fmt.Errorf("error creating new s3 session: %w", err)
+	}
+
+	svc := s3.New(sess)
+
+	bucket := awsSDK.String(configurations.AwsS3Bucket)
+	_, err = svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: bucket,
+	})
+
+	if err != nil {
+		return fmt.Errorf("Unable to create S3 bucket  %v", err)
+	}
+
+	return nil
 }
