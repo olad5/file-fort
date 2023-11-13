@@ -6,13 +6,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/olad5/file-fort/internal/handlers/auth"
 	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
+	healthHandlers "github.com/olad5/file-fort/internal/handlers/health"
 	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
 	authService "github.com/olad5/file-fort/internal/services/auth"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandlers.FileHandler, authService authService.AuthService) http.Handler {
+func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandlers.FileHandler, healthcheckHandler healthHandlers.HealthHandler, authService authService.AuthService) http.Handler {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
@@ -22,6 +23,7 @@ func NewHttpRouter(userHandler userHandlers.UserHandler, fileHandler fileHandler
 		)
 		r.Post("/users/login", userHandler.Login)
 		r.Post("/users", userHandler.Register)
+		r.Get("/health", healthcheckHandler.Healthcheck)
 	})
 
 	// -------------------------------------------------------------------------

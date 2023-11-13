@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
+	healthHandlers "github.com/olad5/file-fort/internal/handlers/health"
 	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
 	fileServices "github.com/olad5/file-fort/internal/usecases/files"
 
@@ -71,11 +72,6 @@ func TestMain(m *testing.M) {
 	userRepo, err := postgres.NewPostgresUserRepo(ctx, postgresConnection)
 	if err != nil {
 		log.Fatal("Error Initializing User Repo")
-	}
-
-	err = userRepo.Ping(ctx)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	redisCache, err := redis.New(ctx, configurations)
@@ -127,7 +123,12 @@ func TestMain(m *testing.M) {
 		log.Fatal("failed to create the fileHandler: ", err)
 	}
 
-	appRouter := router.NewHttpRouter(*userHandler, *fileHandler, authService)
+	healthHandler, err := healthHandlers.NewHealthHandler(ctx, postgresConnection, redisCache)
+	if err != nil {
+		log.Fatal("failed to create the healthHandler: ", err)
+	}
+
+	appRouter := router.NewHttpRouter(*userHandler, *fileHandler, *healthHandler, authService)
 	svr = server.CreateNewServer(appRouter)
 
 	exitVal := m.Run()

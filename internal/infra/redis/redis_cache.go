@@ -57,7 +57,7 @@ func (r *RedisCache) DeleteOne(ctx context.Context, key string) error {
 
 func (r *RedisCache) Ping(ctx context.Context) error {
 	if err := r.Client.Ping(ctx).Err(); err != nil {
-		return fmt.Errorf("Failed to Ping Postgres DB:  %w", err)
+		return fmt.Errorf("Failed to Ping Redis Cache", err)
 	}
 	return nil
 }

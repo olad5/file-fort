@@ -27,7 +27,7 @@ var (
 )
 
 const (
-	JWT_HASH_NAME       = "activeJwtClients"
+	JWT_HASH_NAME       = "file-fort-active-jwt-clients"
 	SessionTTLInMinutes = 10
 )
 

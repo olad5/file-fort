@@ -26,3 +26,12 @@ services:
     image: redis:6.2-alpine
     ports:
       - "6080:6379"
+
+  s3_storage:
+    container_name: file-fort-localstack
+    image: localstack/localstack:2.2.0 
+    environment:
+      LOCALSTACK_API_KEY: ${LOCALSTACK_API_KEY:- }
+    ports:
+      - "4570:4566"
+

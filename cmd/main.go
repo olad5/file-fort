@@ -2,14 +2,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/olad5/file-fort/config/data"
 
 	"github.com/olad5/file-fort/config"
 	"github.com/olad5/file-fort/internal/app/router"
 	fileHandlers "github.com/olad5/file-fort/internal/handlers/files"
+	healthHandlers "github.com/olad5/file-fort/internal/handlers/health"
 	userHandlers "github.com/olad5/file-fort/internal/handlers/users"
 	"github.com/olad5/file-fort/internal/infra/aws"
 	"github.com/olad5/file-fort/internal/infra/postgres"
@@ -17,7 +23,6 @@ import (
 	"github.com/olad5/file-fort/internal/services/auth"
 	fileServices "github.com/olad5/file-fort/internal/usecases/files"
 	"github.com/olad5/file-fort/internal/usecases/users"
-	"github.com/olad5/file-fort/pkg/app/server"
 )
 
 func main() {
@@ -31,14 +36,11 @@ func main() {
 		log.Fatal("Error Migrating postgres", err)
 	}
 
+	defer postgresConnection.Close()
+
 	userRepo, err := postgres.NewPostgresUserRepo(ctx, postgresConnection)
 	if err != nil {
 		log.Fatal("Error Initializing User Repo", err)
-	}
-
-	err = userRepo.Ping(ctx)
-	if err != nil {
-		log.Fatal("Failed to ping UserRepo", err)
 	}
 
 	redisCache, err := redis.New(ctx, configurations)
@@ -86,10 +88,31 @@ func main() {
 		log.Fatal("failed to create the fileHandler: ", err)
 	}
 
-	appRouter := router.NewHttpRouter(*userHandler, *fileHandler, authService)
+	healthHandler, err := healthHandlers.NewHealthHandler(ctx, postgresConnection, redisCache)
+	if err != nil {
+		log.Fatal("failed to create the healthHandler: ", err)
+	}
 
-	svr := server.CreateNewServer(appRouter)
+	appRouter := router.NewHttpRouter(*userHandler, *fileHandler, *healthHandler, authService)
 
-	log.Printf("Server Listening on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, svr.Router))
+	server := &http.Server{Addr: ":" + port, Handler: appRouter}
+	go func() {
+		fmt.Println("Server is running....")
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			fmt.Printf("HTTP server ListenAndServe: %v", err)
+		}
+	}()
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
+	<-signals
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		fmt.Printf("Server forced to shutdown: %v", err)
+	}
+
+	fmt.Println("Server exiting gracefully")
 }

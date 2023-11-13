@@ -22,6 +22,10 @@ var (
 )
 
 func Migrate(ctx context.Context, db *sqlx.DB) error {
+	if err := statusCheck(ctx, db); err != nil {
+		return fmt.Errorf("status check database: %w", err)
+	}
+
 	goose.SetBaseFS(embedMigrations)
 	if err := goose.SetDialect("postgres"); err != nil {
 		return fmt.Errorf("error selecting Dialect for database migration: %w", err)

@@ -20,6 +20,7 @@ func NewPostgresUserRepo(ctx context.Context, connection *sqlx.DB) (*PostgresUse
 	if connection == nil {
 		return &PostgresUserRepository{}, fmt.Errorf("Failed to create PostgresFileRepository: connection is nil")
 	}
+
 	return &PostgresUserRepository{connection: connection}, nil
 }
 
@@ -62,14 +63,6 @@ func (p *PostgresUserRepository) GetUserByUserId(ctx context.Context, userId uui
 		return domain.User{}, fmt.Errorf("error getting user by userId: %w", err)
 	}
 	return toUser(user), nil
-}
-
-func (p *PostgresUserRepository) Ping(ctx context.Context) error {
-	err := p.connection.Ping()
-	if err != nil {
-		return fmt.Errorf("Failed to Ping PostgresUserRepository:  %w", err)
-	}
-	return nil
 }
 
 type SqlxUser struct {
