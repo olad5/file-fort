@@ -158,7 +158,7 @@ func TestRegister(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodPost, route, bytes.NewBuffer(requestBody))
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			data := tests.ParseResponse(response)["data"].(map[string]interface{})
+			data := tests.ParseResponse(t, response)["data"].(map[string]interface{})
 			tests.AssertResponseMessage(t, data["email"].(string), email)
 		},
 	)
@@ -188,7 +188,7 @@ func TestRegister(t *testing.T) {
 
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusBadRequest, response.Code)
-			message := tests.ParseResponse(response)["message"].(string)
+			message := tests.ParseResponse(t, response)["message"].(string)
 			tests.AssertResponseMessage(t, message, "email already exist")
 		},
 	)
@@ -217,7 +217,7 @@ func TestLogin(t *testing.T) {
 			response := tests.ExecuteRequest(req, svr)
 
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "user logged in successfully")
 
@@ -249,7 +249,7 @@ func TestLogin(t *testing.T) {
 			response := tests.ExecuteRequest(req, svr)
 
 			tests.AssertStatusCode(t, http.StatusUnauthorized, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "invalid credentials")
 		},
@@ -272,7 +272,7 @@ func TestLogin(t *testing.T) {
 			response := tests.ExecuteRequest(req, svr)
 
 			tests.AssertStatusCode(t, http.StatusNotFound, response.Code)
-			message := tests.ParseResponse(response)["message"].(string)
+			message := tests.ParseResponse(t, response)["message"].(string)
 			tests.AssertResponseMessage(t, message, "user does not exist")
 		},
 	)
@@ -299,13 +299,13 @@ func TestFileUpload(t *testing.T) {
 
 			req, _ := http.NewRequest(http.MethodPost, route, &requestBody)
 
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 			response := ExecuteRequestMultiPart(req, svr)
 			tests.AssertStatusCode(t, http.StatusBadRequest, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "The file you are trying to upload exceeds the maximum allowed size of 200MB.")
 		},
@@ -327,14 +327,14 @@ func TestFileUpload(t *testing.T) {
 			writer.Close()
 
 			req, _ := http.NewRequest(http.MethodPost, route, &requestBody)
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 
 			req.Header.Set("Authorization", "Bearer "+token)
 
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 			response := ExecuteRequestMultiPart(req, svr)
 			tests.AssertStatusCode(t, http.StatusNotFound, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "folder does not exist")
 		},
@@ -357,7 +357,7 @@ func TestFileUpload(t *testing.T) {
 
 			req, _ := http.NewRequest(http.MethodPost, route, &requestBody)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 
 			userId := getCurrentUser(t, token)["id"].(string)
 
@@ -365,7 +365,7 @@ func TestFileUpload(t *testing.T) {
 
 			response := ExecuteRequestMultiPart(req, svr)
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "file uploaded successfully")
 
@@ -387,14 +387,14 @@ func TestFileDownload(t *testing.T) {
       `,
 		func(t *testing.T) {
 			fileSize := int64(1024)
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 			fileId := uploadFile(t, fileSize, "someFile", "", token)
 
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
 			req.Header.Set("Authorization", "Bearer "+token)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "download url generated successfully")
 			data := responseBody["data"].(map[string]interface{})
@@ -413,7 +413,7 @@ func TestFileDownload(t *testing.T) {
       `,
 		func(t *testing.T) {
 			fileSize := int64(1024)
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 			fileId := uploadFile(t, fileSize, "someFile", "", token)
 
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
@@ -421,7 +421,7 @@ func TestFileDownload(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+emptyBearerToken)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusUnauthorized, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "unauthorized")
 		},
@@ -433,7 +433,7 @@ func TestFileDownload(t *testing.T) {
       `,
 		func(t *testing.T) {
 			fileSize := int64(1024)
-			fileOwnerToken := logUserIn(userEmail, userPassword)
+			fileOwnerToken := logUserIn(t, userEmail, userPassword)
 			fileId := uploadFile(t, fileSize, "someFile", "", fileOwnerToken)
 
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
@@ -441,12 +441,12 @@ func TestFileDownload(t *testing.T) {
 			newUserEmail := "mikesmith" + fmt.Sprint(tests.GenerateUniqueId()) + "@gmail.com"
 			newUserPassword := "some-password"
 			_ = createUser(t, "mike", "smith", newUserEmail, newUserPassword)
-			currentUserToken := logUserIn(newUserEmail, newUserPassword)
+			currentUserToken := logUserIn(t, newUserEmail, newUserPassword)
 
 			req.Header.Set("Authorization", "Bearer "+currentUserToken)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusForbidden, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "unauthorized to view this file")
 		},
@@ -457,14 +457,14 @@ func TestFileDownload(t *testing.T) {
           And the response message should indicate the file was not found
         `,
 		func(t *testing.T) {
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 
 			fileId := "6372ad3a-f9b4-4ff9-b7a3-c3f0a42be194"
 			req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
 			req.Header.Set("Authorization", "Bearer "+token)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusNotFound, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "file does not exist")
 		},
@@ -484,7 +484,7 @@ func TestCreateFolder(t *testing.T) {
 			password := "some-password"
 
 			userId := createUser(t, "mike", "smith", email, password)
-			token := logUserIn(email, password)
+			token := logUserIn(t, email, password)
 			folderName := "some-new-folder"
 
 			requestBody := []byte(fmt.Sprintf(`{
@@ -495,7 +495,7 @@ func TestCreateFolder(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+token)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "folder created successfully")
 			data := responseBody["data"].(map[string]interface{})
@@ -516,7 +516,7 @@ func TestGetFilesInFolder(t *testing.T) {
 			password := "some-password"
 
 			_ = createUser(t, "mike", "smith", email, password)
-			token := logUserIn(email, password)
+			token := logUserIn(t, email, password)
 			userId := getCurrentUser(t, token)["id"].(string)
 			folderName := "some-new-folder"
 
@@ -538,7 +538,7 @@ func TestGetFilesInFolder(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+token)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "files retreived successfully")
 			data := responseBody["data"].(map[string]interface{})
@@ -559,15 +559,15 @@ func TestMarkFileAsUnsafe(t *testing.T) {
       `,
 		func(t *testing.T) {
 			fileSize := int64(1024)
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 			fileId := uploadFile(t, fileSize, "someFile", "", token)
 
-			token = logUserIn(adminEmail, adminPassword)
+			token = logUserIn(t, adminEmail, adminPassword)
 			req, _ := http.NewRequest(http.MethodPost, "/file"+"/"+fileId+"/mark-unsafe", nil)
 			req.Header.Set("Authorization", "Bearer "+token)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusOK, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "file marked unsafe successfully")
 			_, err := getFileDownloadUrl(t, token, fileId)
@@ -583,14 +583,14 @@ func TestMarkFileAsUnsafe(t *testing.T) {
       `,
 		func(t *testing.T) {
 			fileSize := int64(1024)
-			token := logUserIn(userEmail, userPassword)
+			token := logUserIn(t, userEmail, userPassword)
 			fileId := uploadFile(t, fileSize, "someFile", "", token)
 
 			req, _ := http.NewRequest(http.MethodPost, "/file"+"/"+fileId+"/mark-unsafe", nil)
 			req.Header.Set("Authorization", "Bearer "+token)
 			response := tests.ExecuteRequest(req, svr)
 			tests.AssertStatusCode(t, http.StatusUnauthorized, response.Code)
-			responseBody := tests.ParseResponse(response)
+			responseBody := tests.ParseResponse(t, response)
 			message := responseBody["message"].(string)
 			tests.AssertResponseMessage(t, message, "unauthorized to perform this action")
 			_, err := getFileDownloadUrl(t, token, fileId)
@@ -612,7 +612,7 @@ func createFolder(t testing.TB, folderName, accessToken string) string {
 
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	response := tests.ExecuteRequest(req, svr)
-	responseBody := tests.ParseResponse(response)
+	responseBody := tests.ParseResponse(t, response)
 	data := responseBody["data"].(map[string]interface{})
 	folderId := data["id"].(string)
 	return folderId
@@ -639,7 +639,7 @@ func uploadFile(t testing.TB, fileSize int64, fileName, folderId, accessToken st
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	response := ExecuteRequestMultiPart(req, svr)
-	responseBody := tests.ParseResponse(response)
+	responseBody := tests.ParseResponse(t, response)
 	data := responseBody["data"].(map[string]interface{})
 	fileId := data["id"].(string)
 
@@ -657,7 +657,7 @@ func createUser(t testing.TB, firstName, lastName, email, password string) strin
       }`, firstName, lastName, email, password))
 	req, _ := http.NewRequest(http.MethodPost, route, bytes.NewBuffer(requestBody))
 	response := tests.ExecuteRequest(req, svr)
-	data := tests.ParseResponse(response)["data"].(map[string]interface{})
+	data := tests.ParseResponse(t, response)["data"].(map[string]interface{})
 	userId := data["id"].(string)
 
 	return userId
@@ -668,7 +668,7 @@ func getCurrentUser(t testing.TB, token string) map[string]interface{} {
 	req, _ := http.NewRequest(http.MethodGet, "/users/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	response := tests.ExecuteRequest(req, svr)
-	responseBody := tests.ParseResponse(response)
+	responseBody := tests.ParseResponse(t, response)
 	data := responseBody["data"].(map[string]interface{})
 	return data
 }
@@ -679,7 +679,7 @@ func getFileDownloadUrl(t testing.TB, token, fileId string) (string, error) {
 	req, _ := http.NewRequest(http.MethodGet, route+"/"+fileId, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	response := tests.ExecuteRequest(req, svr)
-	responseBody := tests.ParseResponse(response)
+	responseBody := tests.ParseResponse(t, response)
 	message := responseBody["message"].(string)
 	if message == "file does not exist" {
 		return "", fmt.Errorf("file does not exist")
@@ -689,14 +689,14 @@ func getFileDownloadUrl(t testing.TB, token, fileId string) (string, error) {
 	return data["download_url"].(string), nil
 }
 
-func logUserIn(email, password string) string {
+func logUserIn(t testing.TB, email, password string) string {
 	requestBody := []byte(fmt.Sprintf(`{
       "email": "%s",
       "password": "%s"
       }`, email, password))
 	loginReq, _ := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(requestBody))
 	loginResponse := tests.ExecuteRequest(loginReq, svr)
-	loginResponseBody := tests.ParseResponse(loginResponse)
+	loginResponseBody := tests.ParseResponse(t, loginResponse)
 	loginData := loginResponseBody["data"].(map[string]interface{})
 	accessToken := loginData["access_token"]
 	token := accessToken.(string)

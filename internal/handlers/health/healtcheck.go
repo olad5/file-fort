@@ -19,5 +19,4 @@ func (h HealthHandler) Healthcheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.ErrorResponse(w, "service is live", http.StatusOK)
-	return
 }

@@ -34,9 +34,13 @@ func AssertResponseMessage(t *testing.T, got, expected string) {
 	}
 }
 
-func ParseResponse(w *httptest.ResponseRecorder) map[string]interface{} {
+func ParseResponse(t testing.TB, w *httptest.ResponseRecorder) map[string]interface{} {
 	res := make(map[string]interface{})
-	json.NewDecoder(w.Body).Decode(&res)
+	body := w.Body
+	err := json.NewDecoder(body).Decode(&res)
+	if err != nil {
+		t.Fatalf("Unable to parse response from body %q '%v'", body, err)
+	}
 	return res
 }
 
