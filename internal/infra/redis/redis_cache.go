@@ -13,10 +13,7 @@ type RedisCache struct {
 	Client *redis.Client
 }
 
-var (
-	ttl                    = time.Minute * 30
-	contextTimeoutDuration = 3 * time.Second
-)
+var ttl = time.Minute * 30
 
 func New(ctx context.Context, configurations *config.Configurations) (*RedisCache, error) {
 	client := redis.NewClient(&redis.Options{
@@ -57,7 +54,7 @@ func (r *RedisCache) DeleteOne(ctx context.Context, key string) error {
 
 func (r *RedisCache) Ping(ctx context.Context) error {
 	if err := r.Client.Ping(ctx).Err(); err != nil {
-		return fmt.Errorf("Failed to Ping Redis Cache", err)
+		return fmt.Errorf("Failed to Ping Redis Cache: %v", err)
 	}
 	return nil
 }

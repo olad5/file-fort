@@ -67,7 +67,7 @@ func (u *UserService) LogUserIn(ctx context.Context, email, password string) (st
 		return "", err
 	}
 
-	if isPasswordCorrect := comparePasswords(existingUser.Password, []byte(password)); isPasswordCorrect == false {
+	if isPasswordCorrect := comparePasswords(existingUser.Password, []byte(password)); !isPasswordCorrect {
 		return "", ErrPasswordIncorrect
 	}
 
@@ -79,8 +79,8 @@ func (u *UserService) LogUserIn(ctx context.Context, email, password string) (st
 }
 
 func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) {
-	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
-	if ok == false {
+	jwtClaims, ok := auth.Get(ctx)
+	if !ok {
 		return domain.User{}, fmt.Errorf("error parsing JWTClaims")
 	}
 	userId := jwtClaims.ID
@@ -103,9 +103,5 @@ func hashAndSalt(plainPassword []byte) (string, error) {
 func comparePasswords(hashedPassword string, plainPassword []byte) bool {
 	byteHash := []byte(hashedPassword)
 	err := bcrypt.CompareHashAndPassword(byteHash, plainPassword)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }

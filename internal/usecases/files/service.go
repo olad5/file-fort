@@ -33,8 +33,8 @@ func NewFileService(fileRepo infra.FileRepository, folderRepo infra.FolderReposi
 }
 
 func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *multipart.FileHeader, folderId string) (domain.File, error) {
-	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
-	if ok == false {
+	jwtClaims, ok := auth.Get(ctx)
+	if !ok {
 		return domain.File{}, fmt.Errorf("error parsing JWTClaims")
 	}
 
@@ -87,8 +87,8 @@ func (f *FileService) UploadFile(ctx context.Context, file io.Reader, handler *m
 }
 
 func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (string, error) {
-	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
-	if ok == false {
+	jwtClaims, ok := auth.Get(ctx)
+	if !ok {
 		return "", fmt.Errorf("error parsing JWTClaims")
 	}
 
@@ -103,12 +103,15 @@ func (f *FileService) DownloadFile(ctx context.Context, fileId uuid.UUID) (strin
 	}
 
 	fileUrl, err := f.fileStore.GetDownloadUrl(ctx, file.FileStoreKey)
+	if err != nil {
+		return "", err
+	}
 	return fileUrl, nil
 }
 
 func (f *FileService) CreateFolder(ctx context.Context, folderName string) (domain.Folder, error) {
-	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
-	if ok == false {
+	jwtClaims, ok := auth.Get(ctx)
+	if !ok {
 		return domain.Folder{}, fmt.Errorf("error parsing JWTClaims")
 	}
 
@@ -130,8 +133,8 @@ func (f *FileService) CreateFolder(ctx context.Context, folderName string) (doma
 }
 
 func (f *FileService) GetFilesByFolderId(ctx context.Context, folderId uuid.UUID, pageNumber, rowsPerPage int) ([]domain.File, error) {
-	jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
-	if ok == false {
+	jwtClaims, ok := auth.Get(ctx)
+	if !ok {
 		return []domain.File{}, fmt.Errorf("error parsing JWTClaims")
 	}
 
@@ -180,7 +183,7 @@ func (f *FileService) MarkFileAsUnsafe(ctx context.Context, fileId uuid.UUID) er
 		return err
 	}
 
-	if file.IsUnsafe == true {
+	if file.IsUnsafe {
 		return nil
 	}
 

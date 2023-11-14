@@ -61,7 +61,7 @@ func (a *AwsFileStore) SaveToFileStore(ctx context.Context, filename string, fil
 		Body:   file,
 	})
 	if err != nil {
-		return "", fmt.Errorf("Unable to upload %q to %q, %v", filename, bucket, err)
+		return "", fmt.Errorf("Unable to upload %s to %s, %v", filename, *bucket, err)
 	}
 
 	return key, nil
@@ -70,7 +70,7 @@ func (a *AwsFileStore) SaveToFileStore(ctx context.Context, filename string, fil
 func (a *AwsFileStore) GetDownloadUrl(ctx context.Context, key string) (string, error) {
 	downloadUrl, err := a.generatePreSignedUrl(ctx, key)
 	if err != nil {
-		return "", fmt.Errorf("error getting download url", err)
+		return "", fmt.Errorf("error getting download url :%v", err)
 	}
 	return downloadUrl, nil
 }
@@ -95,7 +95,7 @@ func (a *AwsFileStore) DeleteFile(ctx context.Context, key string) error {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return fmt.Errorf("error deleting file from file store", err)
+		return fmt.Errorf("error deleting file from file store: %v", err)
 	}
 	return nil
 }

@@ -89,7 +89,7 @@ func (r *RedisAuthService) DecodeJWT(ctx context.Context, authHeader string) (JW
 
 		var jwtClaims JWTClaims
 		userId, ok := claims["sub"]
-		if ok == true && userId != nil {
+		if ok && userId != nil {
 			jwtClaims.ID, err = uuid.Parse(userId.(string))
 			if err != nil {
 				return JWTClaims{}, ErrDecodingToken
@@ -97,12 +97,12 @@ func (r *RedisAuthService) DecodeJWT(ctx context.Context, authHeader string) (JW
 		}
 
 		userRole, ok := claims["role"]
-		if ok == true && userRole != nil {
+		if ok && userRole != nil {
 			jwtClaims.Role = domain.Role(userRole.(string))
 		}
 
 		userEmail, ok := claims["email"]
-		if ok == true && userEmail != nil {
+		if ok && userEmail != nil {
 			jwtClaims.Email = userEmail.(string)
 		}
 
@@ -121,10 +121,7 @@ func (r *RedisAuthService) IsUserLoggedIn(ctx context.Context, authHeader, userI
 }
 
 func (r *RedisAuthService) IsUserAdmin(ctx context.Context, claims JWTClaims) bool {
-	if claims.Role == "admin" {
-		return true
-	}
-	return false
+	return claims.Role == "admin"
 }
 
 func constructUserIdKey(key string) string {

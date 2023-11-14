@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/olad5/file-fort/internal/services/auth"
@@ -22,12 +21,12 @@ func EnsureAuthenticated(authService auth.AuthService) func(next http.Handler) h
 			}
 
 			userId := jwtClaims.ID.String()
-			if isUserLoggedIn := authService.IsUserLoggedIn(ctx, authHeader, userId); isUserLoggedIn != true {
+			if isUserLoggedIn := authService.IsUserLoggedIn(ctx, authHeader, userId); !isUserLoggedIn {
 				response.ErrorResponse(w, appErrors.ErrUnauthorized, http.StatusUnauthorized)
 				return
 			}
 
-			ctx = context.WithValue(ctx, "jwtClaims", jwtClaims)
+			ctx = auth.Set(ctx, jwtClaims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -37,14 +36,13 @@ func AdminGuard(authService auth.AuthService) func(next http.Handler) http.Handl
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-
-			jwtClaims, ok := ctx.Value("jwtClaims").(auth.JWTClaims)
-			if ok == false {
+			jwtClaims, ok := auth.Get(ctx)
+			if !ok {
 				response.ErrorResponse(w, appErrors.ErrUserNotAdmin, http.StatusUnauthorized)
 				return
 			}
 
-			if isUserAdmin := authService.IsUserAdmin(ctx, jwtClaims); isUserAdmin != true {
+			if isUserAdmin := authService.IsUserAdmin(ctx, jwtClaims); !isUserAdmin {
 				response.ErrorResponse(w, appErrors.ErrUserNotAdmin, http.StatusUnauthorized)
 				return
 			}

@@ -11,7 +11,6 @@ func (h HealthHandler) Healthcheck(w http.ResponseWriter, r *http.Request) {
 	if err := h.db.Ping(); err != nil {
 		response.ErrorResponse(w, "postgres is down", http.StatusNotFound)
 		return
-
 	}
 
 	if err := h.cache.Ping(ctx); err != nil {

@@ -13,6 +13,19 @@ type JWTClaims struct {
 	Email string
 }
 
+type ctxKey int
+
+const jwtKey ctxKey = 1
+
+func Set(ctx context.Context, jwt JWTClaims) context.Context {
+	return context.WithValue(ctx, jwtKey, jwt)
+}
+
+func Get(ctx context.Context) (JWTClaims, bool) {
+	v, ok := ctx.Value(jwtKey).(JWTClaims)
+	return v, ok
+}
+
 type AuthService interface {
 	IsUserAdmin(ctx context.Context, claims JWTClaims) bool
 	DecodeJWT(ctx context.Context, tokenString string) (JWTClaims, error)

@@ -12,7 +12,6 @@ import (
 )
 
 func (f FileHandler) MarkFileAsUnSafe(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		response.ErrorResponse(w, "file id required", http.StatusBadRequest)
@@ -25,6 +24,7 @@ func (f FileHandler) MarkFileAsUnSafe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
 	err = f.fileService.MarkFileAsUnsafe(ctx, fileId)
 	if err != nil {
 		switch {
