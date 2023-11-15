@@ -1,0 +1,27 @@
+name: Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v cmd/main.go 
+      - name: Test with the Go CLI
+        run: make test.verbose
+      - name: Lint with golangci-lint
+        run: golangci-lint run
+
